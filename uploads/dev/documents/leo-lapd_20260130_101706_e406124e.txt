@@ -1,0 +1,120 @@
+https://developers.google.com/machine-learning/crash-course/linear-regression?hl=zh-cn
+https://dictionary.cambridge.org/dictionary/english-chinese-simplified/caption
+https://dictionary.cambridge.org
+https://www.ieltsonlinetests.com/zh-hans/reading-tips?page=10
+https://ieltsonlinetests.com/zh-hans/listening-tips/18913289.html
+https://www.smithsonianmag.com/category/smartnews-ideas-innovations/
+李昂(ang1.li@dhc.com.cn)，登录用户名为：liang.hx，登录密码为：cP2Pln@5xK6DV@QxtXt!
+<property name="dynamic.classpath" value="true" />
+git config user.name '李昂'
+-SNAPSHOT
+APS-MeoFogf532yiiQ3bEpvakajwtbi4B4Mb
+mvn checkstyle:checkstyle
+mvn sonar:sonar -U -Dsonar.host.url=https://sonar7.ylhtest.com -DskipTests=true
+git reset --soft HEAD~1
+git checkout -b user/li
+git push -u origin user/li
+
+(rollbackFor = Exception.class)
+数据库密码：leozel123
+javac -encoding UTF-8 GarbageCollectionDemo.java
+
+mvn org.jacoco:jacoco-maven-plugin:0.8.12:prepare-agent test org.jacoco:jacoco-maven-plugin:0.8.12:report -Dmaven.test.failure.ignore=true
+
+git push origin HEAD:refs/for/dev
+git push origin HEAD:refs/for/master
+
+优选推送：git push -u origin user/yilihuo-33376
+政策推送：git push -u origin user/yilihuo-36416
+
+
+yilihuo-49895 feat 【政策】修改优选发起终止时政策无法获取客户信息
+yilihuo-49895 feat 【优选】修改更新优选活动状态
+yilihuo-49895 feat 【签约】对接统仓统配无模版合同
+yilihuo-49895 feat 【易问】待办修改，去除默认发起人
+yilihuo-49895 feat 【智能体】修改场景指标编辑时校验问题
+
+yilihuo-49721 fix 【dev-库存】月账单对账，发起后立即撤销，实际没有撤销成功
+
+
+user prampt , system prampt, ai agent ,function calling,agent tools,mcp
+政策：终止：update-goods-Rebate-data-status
+          作废：	
+
+
+SELECT * from budget_amount_change_log WHERE `trade_order_code` =DH.20250917.002328;
+DELETE  from budget_amount_change_log WHERE id  in(55831,55834,55835);
+
+ylh.mq.stock.initialization-stock.queue.budget      budget:  budget-settle
+
+
+SQL多表关联-----AOP相关知识
+优化代码处理乐观锁与Kafka堆积问题-----线程池相关知识
+
+
+assertThrows(NullPointerException.class, () -> {    }});}
+
+    assertThrows(IllegalArgumentException.class, () -> {      });}
+
+    //    assertThrows(NullPointerException.class, () -> {    }});}
+    //    mockedStaticJshI18nUtil.when(() -> JshI18nUtil.getMsg(anyString())).thenReturn("true");
+    //    assertThrows(JshServerException.class, () -> {    }});}
+
+xxl:
+  job:
+    jobInfo:
+    - executorHandler: sendAsynNotificationLogJobHandler
+      jobCron: 0 0/10 * * * ?
+      jobDesc: 定时运维给第三方发消息job
+      author: 李昂
+
+阿里云：
+liang@jsh.onaliyun.com  
+Yaobaiyang123{
+
+易问e答v3：
+中台v2：
+
+
+&lt;  小于
+&gt;  大于  
+pc-2zes57hz7y32315r9.mysql.polardb.rds.aliyuncs.com:3306  
+
+
+es 9.1.3 密码：7ZvmdSfdM=x8DLp1bcsi
+
+es 7.10.0：
+Changed password for user apm_system
+PASSWORD apm_system = lb3OVl5iJ9T7JWnSnU8u
+
+Changed password for user kibana_system
+PASSWORD kibana_system = ZjxgdTaqUwylQClqqWoV
+
+Changed password for user kibana
+PASSWORD kibana = ZjxgdTaqUwylQClqqWoV
+
+Changed password for user logstash_system
+PASSWORD logstash_system = M63i4oOf4gXhiV4laGLF
+
+Changed password for user beats_system
+PASSWORD beats_system = lOoTjVWe4WdRlAxwkqiF
+
+Changed password for user remote_monitoring_user
+PASSWORD remote_monitoring_user = jIls4pZXuGnNIDrqiHmi
+
+Changed password for user elastic
+PASSWORD elastic = 8bm1nplctUdkLfcqYHyd
+
+聊天可以添加额外上下文： 通过添加#
+	# docx  怎么引用网上的文档
+子智能体：怎么使用，新开一个session吗，还是直接在主智能体session输入内容，告诉他去生成子智能体吗---在主智能体聊天框继续
+
+checkpoint  restore还会回滚上下文
+
+
+spec：生成的有问题，怎么跟他反馈，我们直接修改还是在session中反馈---最好在session中提示
+
+基于属性测试：我们就是要求kiro满足需求文档？
+
+
+kiro-powers
