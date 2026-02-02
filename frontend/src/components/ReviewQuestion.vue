@@ -18,6 +18,24 @@
       <div class="highlight-pronunciation" v-if="question.highlight.pronunciation">
         <span class="pronunciation">{{ question.highlight.pronunciation }}</span>
       </div>
+      
+      <!-- Answer Buttons -->
+      <div class="answer-buttons">
+        <button 
+          @click="$emit('answer-selected', 'PASS')"
+          class="answer-btn pass-btn"
+          :disabled="submitting"
+        >
+          Pass
+        </button>
+        <button 
+          @click="$emit('answer-selected', 'NOT_GOT_IT')"
+          class="answer-btn not-got-it-btn"
+          :disabled="submitting"
+        >
+          Not Got It
+        </button>
+      </div>
     </div>
 
     <!-- Context Section -->
@@ -41,33 +59,6 @@
         <p>{{ question.highlight.userComment }}</p>
       </div>
     </div>
-
-    <!-- Answer Quality Selection -->
-    <div class="answer-section">
-      <h5>How well did you know this?</h5>
-      <p class="answer-instruction">Select your confidence level:</p>
-      
-      <div class="quality-grid">
-        <button 
-          v-for="(quality, index) in answerQualities" 
-          :key="quality.value"
-          @click="$emit('answer-selected', quality.value)"
-          :class="['quality-btn', quality.class]"
-          :disabled="submitting"
-          :title="`Press ${index + 1} for ${quality.label}`"
-        >
-          <div class="quality-content">
-            <span class="quality-number">{{ index + 1 }}</span>
-            <span class="quality-label">{{ quality.label }}</span>
-            <span class="quality-description">{{ quality.description }}</span>
-          </div>
-        </button>
-      </div>
-      
-      <div class="keyboard-hint">
-        <small>💡 Tip: Use keyboard numbers 1-5 for quick selection</small>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -88,39 +79,6 @@ export default {
   },
   emits: ['answer-selected'],
   setup(props, { emit }) {
-    const answerQualities = [
-      {
-        value: 'PERFECT',
-        label: 'Perfect',
-        description: 'I knew it immediately',
-        class: 'btn-perfect'
-      },
-      {
-        value: 'CORRECT',
-        label: 'Correct',
-        description: 'I knew it after thinking',
-        class: 'btn-correct'
-      },
-      {
-        value: 'DIFFICULT',
-        label: 'Difficult',
-        description: 'I struggled but got it',
-        class: 'btn-difficult'
-      },
-      {
-        value: 'INCORRECT',
-        label: 'Incorrect',
-        description: 'I got it wrong',
-        class: 'btn-incorrect'
-      },
-      {
-        value: 'BLACKOUT',
-        label: 'No Idea',
-        description: 'Complete blackout',
-        class: 'btn-blackout'
-      }
-    ]
-
     const showComment = ref(false)
 
     // Reset note visibility when the question changes
@@ -136,11 +94,10 @@ export default {
       if (props.submitting) return
       
       const key = event.key
-      if (key >= '1' && key <= '5') {
-        const index = parseInt(key) - 1
-        if (index < answerQualities.length) {
-          emit('answer-selected', answerQualities[index].value)
-        }
+      if (key === '1') {
+        emit('answer-selected', 'PASS')
+      } else if (key === '2') {
+        emit('answer-selected', 'NOT_GOT_IT')
       }
     }
 
@@ -153,7 +110,6 @@ export default {
     })
 
     return {
-      answerQualities,
       showComment
     }
   }
@@ -209,12 +165,64 @@ export default {
 
 .highlight-pronunciation {
   margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .pronunciation {
   font-style: italic;
   color: #6c757d;
   font-size: 1.1rem;
+}
+
+.answer-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.answer-btn {
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 150px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.answer-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.answer-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.pass-btn {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: 2px solid #28a745;
+}
+
+.pass-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #20c997 0%, #28a745 100%);
+}
+
+.not-got-it-btn {
+  background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+  color: white;
+  border: 2px solid #dc3545;
+}
+
+.not-got-it-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e83e8c 0%, #dc3545 100%);
 }
 
 .context-section,
@@ -265,121 +273,7 @@ export default {
   background-color: #e0a800;
 }
 
-.answer-section {
-  margin-top: 3rem;
-}
 
-.answer-section h5 {
-  text-align: center;
-  margin: 0 0 0.5rem 0;
-  color: #2c3e50;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.answer-instruction {
-  text-align: center;
-  color: #6c757d;
-  margin: 0 0 2rem 0;
-}
-
-.quality-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.quality-btn {
-  display: flex;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: left;
-}
-
-.quality-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-}
-
-.quality-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.quality-content {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  gap: 1rem;
-}
-
-.quality-number {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 50%;
-  font-weight: 700;
-  font-size: 1rem;
-}
-
-.quality-label {
-  font-weight: 600;
-  font-size: 1.1rem;
-  min-width: 80px;
-}
-
-.quality-description {
-  flex: 1;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.95rem;
-}
-
-/* Quality button styles */
-.btn-perfect {
-  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-  border-color: #28a745;
-  color: white;
-}
-
-.btn-correct {
-  background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);
-  border-color: #17a2b8;
-  color: white;
-}
-
-.btn-difficult {
-  background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-  border-color: #ffc107;
-  color: white;
-}
-
-.btn-incorrect {
-  background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
-  border-color: #dc3545;
-  color: white;
-}
-
-.btn-blackout {
-  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-  border-color: #6c757d;
-  color: white;
-}
-
-.keyboard-hint {
-  text-align: center;
-  margin-top: 1rem;
-  color: #6c757d;
-}
 
 @media (max-width: 768px) {
   .highlight-text {
@@ -387,14 +281,15 @@ export default {
     padding: 1rem 1.5rem;
   }
   
-  .quality-content {
+  .answer-buttons {
     flex-direction: column;
-    text-align: center;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 1rem;
   }
   
-  .quality-label {
-    min-width: auto;
+  .answer-btn {
+    width: 100%;
+    max-width: 200px;
   }
 }
 </style>

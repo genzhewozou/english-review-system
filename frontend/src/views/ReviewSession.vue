@@ -260,7 +260,7 @@ export default {
 
         // Update session stats
         session.value.totalQuestions = session.value.totalQuestions || 0
-        if (quality === 'PERFECT' || quality === 'CORRECT') {
+        if (quality === 'PASS' || quality === 'PERFECT' || quality === 'CORRECT') {
           session.value.correctAnswers = (session.value.correctAnswers || 0) + 1
         }
 

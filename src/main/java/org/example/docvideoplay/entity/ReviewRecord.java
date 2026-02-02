@@ -96,6 +96,7 @@ public class ReviewRecord extends BaseEntity {
     public boolean isCorrectAnswer() {
         return quality == AnswerQuality.PERFECT || 
                quality == AnswerQuality.CORRECT || 
-               quality == AnswerQuality.DIFFICULT;
+               quality == AnswerQuality.DIFFICULT ||
+               quality == AnswerQuality.PASS;
     }
 }

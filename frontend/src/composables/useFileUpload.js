@@ -19,7 +19,7 @@ export function useFileUpload() {
   })
 
   const supportedDocumentFormats = computed(() => {
-    return import.meta.env.VITE_SUPPORTED_DOCUMENT_FORMATS?.split(',') || ['pdf', 'doc', 'docx', 'txt']
+    return import.meta.env.VITE_SUPPORTED_DOCUMENT_FORMATS?.split(',') || ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'ods', 'odp', 'xls', 'xlsx', 'ppt', 'pptx', 'md', 'html', 'htm', 'csv']
   })
 
   const maxFileSize = computed(() => {

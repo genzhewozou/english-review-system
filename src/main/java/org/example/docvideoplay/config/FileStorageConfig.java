@@ -15,7 +15,7 @@ public class FileStorageConfig {
     private String videosPath = "./uploads/english-learning/videos";
     private String articlesPath = "./uploads/english-learning/articles";
     private String maxFileSize = "100MB";
-    private List<String> allowedDocumentTypes = Arrays.asList("pdf", "doc", "docx", "txt", "rtf");
+    private List<String> allowedDocumentTypes = Arrays.asList("pdf", "doc", "docx", "txt", "rtf", "odt", "ods", "odp", "xls", "xlsx", "ppt", "pptx", "md", "html", "htm", "csv");
     private List<String> allowedVideoTypes = Arrays.asList("mp4", "avi", "mov", "wmv", "flv");
     private List<String> allowedArticleTypes = Arrays.asList("html", "htm", "md");
     

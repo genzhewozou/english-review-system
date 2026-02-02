@@ -28,6 +28,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.hwpf.HWPFDocument;
+import org.apache.poi.hwpf.extractor.WordExtractor;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.tika.Tika;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.Metadata;
 
 /**
  * Implementation of StudyMaterialService for managing study materials.
@@ -351,9 +360,45 @@ public class StudyMaterialServiceImpl implements StudyMaterialService {
                 throw new IOException("File not found: " + material.getFilePath());
             }
             
-            // Read the file content as UTF-8 text
-            byte[] bytes = Files.readAllBytes(filePath);
-            String content = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+            String extension = getFileExtension(fileName).toLowerCase();
+            String content;
+            
+            // Handle different document types
+            if (extension.equals("docx")) {
+                // Read DOCX file using POI
+                try (XWPFDocument doc = new XWPFDocument(Files.newInputStream(filePath))) {
+                    StringBuilder textBuilder = new StringBuilder();
+                    for (XWPFParagraph paragraph : doc.getParagraphs()) {
+                        textBuilder.append(paragraph.getText());
+                        textBuilder.append("\n");
+                    }
+                    content = textBuilder.toString();
+                }
+            } else if (extension.equals("doc")) {
+                // Read DOC file using POI
+                try (HWPFDocument doc = new HWPFDocument(Files.newInputStream(filePath));
+                     WordExtractor extractor = new WordExtractor(doc)) {
+                    content = String.join("\n", extractor.getParagraphText());
+                }
+            } else if (extension.equals("pdf")) {
+                // Read PDF file using PDFBox
+                try (PDDocument doc = PDDocument.load(Files.newInputStream(filePath))) {
+                    org.apache.pdfbox.text.PDFTextStripper stripper = new org.apache.pdfbox.text.PDFTextStripper();
+                    content = stripper.getText(doc);
+                }
+            } else {
+                // Use Tika for other document formats (rtf, odt, ods, odp, xls, xlsx, ppt, pptx)
+                try (java.io.InputStream is = Files.newInputStream(filePath)) {
+                    Tika tika = new Tika();
+                    content = tika.parseToString(is);
+                } catch (TikaException te) {
+                    logger.warn("Tika failed to parse file, falling back to plain text: {}", te.getMessage());
+                    // Fallback to plain text if Tika fails
+                    byte[] bytes = Files.readAllBytes(filePath);
+                    content = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                }
+            }
+            
             logger.debug("Read text content for material {}: {} characters", materialId, content.length());
             
             return content;
@@ -377,6 +422,17 @@ public class StudyMaterialServiceImpl implements StudyMaterialService {
                extension.equals("json") ||
                extension.equals("xml") ||
                extension.equals("html") ||
-               extension.equals("htm");
+               extension.equals("htm") ||
+               extension.equals("doc") ||
+               extension.equals("docx") ||
+               extension.equals("pdf") ||
+               extension.equals("rtf") ||
+               extension.equals("odt") ||
+               extension.equals("ods") ||
+               extension.equals("odp") ||
+               extension.equals("xls") ||
+               extension.equals("xlsx") ||
+               extension.equals("ppt") ||
+               extension.equals("pptx");
     }
 }
