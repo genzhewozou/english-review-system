@@ -62,20 +62,20 @@
     </div>
     
     <div v-else class="todos-list">
-      <div v-for="todo in filteredTodos" :key="todo.id" class="card todo-card" :class="getTodoCardClass(todo)">
+      <div v-for="todo in filteredTodos" :key="todo.id" class="card todo-card" :class="getTodoCardClass(todo)" @click="handleTodoClick(todo)">
         <div class="todo-header">
           <div class="todo-title-section">
             <input 
               type="checkbox" 
               :checked="todo.completed" 
-              @change="toggleTodo(todo.id)"
+              @change.stop="toggleTodo(todo.id)"
               class="todo-checkbox"
             >
-            <h4 :class="{ 'completed': todo.completed }">{{ todo.title }}</h4>
+            <h4 :class="{ 'completed': todo.completed, 'clickable': todo.type === 'REVIEW_SESSION' }">{{ todo.title }}</h4>
           </div>
           <div class="todo-actions">
             <span class="todo-type">{{ todo.type }}</span>
-            <button @click="deleteTodo(todo.id)" class="btn btn-danger btn-sm">Delete</button>
+            <button @click.stop="deleteTodo(todo.id)" class="btn btn-danger btn-sm">Delete</button>
           </div>
         </div>
         
@@ -101,6 +101,7 @@
 
 <script>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useApiService } from '../composables/useApiService'
 import { useNotificationStore } from '../stores/notificationStore'
 import { useNotification } from '../composables/useNotification'
@@ -114,6 +115,8 @@ export default {
     const showAddModal = ref(false)
     const filterStatus = ref('all')
     const filterType = ref('all')
+    
+    const router = useRouter()
     
     const addForm = ref({
       title: '',
@@ -163,7 +166,7 @@ export default {
     const loadTodos = async () => {
       loading.value = true
       try {
-        const response = await apiService.get('/todo')
+        const response = await apiService.get('/todos')
         todos.value = response.data || []
         
         // Check for overdue items and show notifications if needed
@@ -216,7 +219,7 @@ export default {
           type: 'CUSTOM_TASK'
         }
         
-        const response = await apiService.post('/todo', taskData)
+        const response = await apiService.post('/todos', taskData)
         todos.value.unshift(response.data)
         
         // Reset form and close modal
@@ -233,7 +236,7 @@ export default {
     
     const toggleTodo = async (id) => {
       try {
-        await apiService.put(`/todo/${id}/complete`)
+        await apiService.put(`/todos/${id}/complete`)
         
         // Update local state
         const todo = todos.value.find(t => t.id === id)
@@ -254,12 +257,19 @@ export default {
       if (!confirm('Are you sure you want to delete this task?')) return
       
       try {
-        await apiService.delete(`/todo/${id}`)
+        await apiService.delete(`/todos/${id}`)
         todos.value = todos.value.filter(t => t.id !== id)
         showSuccess('Task deleted successfully')
       } catch (error) {
         console.error('Error deleting todo:', error)
         showError('Failed to delete task. Please try again.')
+      }
+    }
+    
+    const handleTodoClick = (todo) => {
+      if (todo.type === 'REVIEW_SESSION') {
+        // Navigate to review page to start a session
+        router.push('/review')
       }
     }
     
@@ -315,6 +325,7 @@ export default {
       toggleTodo,
       deleteTodo,
       closeAddModal,
+      handleTodoClick,
       getTodoCardClass,
       getDueDateClass,
       formatDate,
@@ -386,6 +397,15 @@ export default {
 .todo-title-section h4.completed {
   text-decoration: line-through;
   color: #6c757d;
+}
+
+.todo-title-section h4.clickable {
+  cursor: pointer;
+  color: #007bff;
+}
+
+.todo-title-section h4.clickable:hover {
+  text-decoration: underline;
 }
 
 .todo-actions {

@@ -22,34 +22,53 @@
         <div class="material-selection mt-3" v-if="materials.length">
           <h4 class="selection-title">Step 1: Choose study materials</h4>
           <p class="selection-help">
-            Select one or more materials to view their vocabulary highlights.
+            Select one material to view its vocabulary highlights.
           </p>
-          <div class="material-checkbox-list">
+          <div class="material-radio-list">
             <label
               v-for="material in materials"
               :key="material.id"
-              class="material-checkbox-item"
+              class="material-radio-item"
             >
               <input
-                type="checkbox"
+                type="radio"
+                name="materialSelection"
                 :value="material.id"
-                v-model="selectedMaterialIds"
+                v-model="selectedMaterialId"
                 @change="onMaterialsChange"
               />
-              <span class="material-checkbox-label">{{ material.title }}</span>
+              <span class="material-radio-label">{{ material.title }}</span>
             </label>
           </div>
         </div>
         
         <!-- Step 2: Show vocabulary of the selected materials -->
-        <div v-if="selectedMaterialIds.length && materialHighlights.length" class="highlight-selection mt-3">
+        <div v-if="selectedMaterialId && materialHighlights.length" class="highlight-selection mt-3">
           <h4 class="selection-title">Step 2: Choose vocabulary for this session</h4>
           <p class="selection-help">
             Select the words you want to add to your new review session.
           </p>
+          <!-- Search input for highlights -->
+          <div class="search-container mb-3">
+            <input
+              type="text"
+              v-model="searchQuery"
+              placeholder="Search highlights..."
+              class="search-input"
+            />
+            <div class="search-options">
+              <label class="similar-search-toggle">
+                <input
+                  type="checkbox"
+                  v-model="similarSearchEnabled"
+                />
+                <span>Include similar words</span>
+              </label>
+            </div>
+          </div>
           <div class="selection-list">
             <label
-              v-for="h in materialHighlights"
+              v-for="h in filteredHighlights"
               :key="h.id"
               class="selection-item"
             >
@@ -62,10 +81,37 @@
             </label>
           </div>
         </div>
+        
+        <!-- Step 3: Show selected highlights with source information -->
+        <div v-if="selectedHighlightsList.length" class="selected-highlights-summary mt-3">
+          <h4 class="selection-title">Step 3: Selected highlights ({{ selectedHighlightsList.length }})</h4>
+          <p class="selection-help">
+            Review your selected highlights before starting the session.
+          </p>
+          <div class="selected-highlights-list">
+            <div
+              v-for="highlight in selectedHighlightsList"
+              :key="highlight.id"
+              class="selected-highlight-item"
+            >
+              <div class="highlight-info">
+                <span class="highlight-text">{{ highlight.text }}</span>
+                <span class="highlight-source">From: {{ highlight.materialTitle }}</span>
+              </div>
+              <button
+                @click="deleteHighlight(highlight.id)"
+                class="delete-btn"
+                title="Remove from selection"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        </div>
 
         <button 
           @click="startReviewSession" 
-          :disabled="starting || (selectedMaterialIds.length > 0 && selectedHighlightIds.length === 0)"
+          :disabled="starting || (selectedMaterialId && selectedHighlightIds.length === 0)"
           class="btn mt-3"
         >
           {{ starting ? 'Starting...' : (selectedHighlightIds.length ? 'Start Selected Review Session' : 'Start Review Session') }}
@@ -84,7 +130,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useApiService } from '../composables/useApiService'
 import { useMaterialService } from '../services/materialService'
@@ -100,8 +146,87 @@ export default {
     const highlights = ref([])
     const selectedHighlightIds = ref([])
     const materials = ref([])
-    const selectedMaterialIds = ref([])
+    const selectedMaterialId = ref('')
     const materialHighlights = ref([])
+    const searchQuery = ref('')
+    const similarSearchEnabled = ref(false)
+    
+    // Helper function to calculate string similarity (Levenshtein distance)
+    const getSimilarity = (str1, str2) => {
+      const len1 = str1.length
+      const len2 = str2.length
+      const matrix = Array(len1 + 1).fill().map(() => Array(len2 + 1).fill(0))
+      
+      for (let i = 0; i <= len1; i++) matrix[i][0] = i
+      for (let j = 0; j <= len2; j++) matrix[0][j] = j
+      
+      for (let i = 1; i <= len1; i++) {
+        for (let j = 1; j <= len2; j++) {
+          const cost = str1[i - 1] === str2[j - 1] ? 0 : 1
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j - 1] + cost
+          )
+        }
+      }
+      
+      const maxLength = Math.max(len1, len2)
+      return (maxLength - matrix[len1][len2]) / maxLength
+    }
+    
+    // Computed property for filtered highlights
+    const filteredHighlights = computed(() => {
+      if (!searchQuery.value) {
+        return materialHighlights.value
+      }
+      
+      const query = searchQuery.value.toLowerCase()
+      
+      return materialHighlights.value.filter(h => {
+        const highlightText = h.text.toLowerCase()
+        
+        // Exact match
+        if (highlightText.includes(query)) {
+          return true
+        }
+        
+        // Similar word search if enabled
+        if (similarSearchEnabled.value) {
+          // Split into words and check similarity for each word
+          const words = highlightText.split(/\s+/)
+          return words.some(word => {
+            const similarity = getSimilarity(query, word)
+            return similarity > 0.6 // 60% similarity threshold
+          })
+        }
+        
+        return false
+      })
+    })
+    
+    // Computed property for selected highlights with material information
+    const selectedHighlightsList = computed(() => {
+      return selectedHighlightIds.value.map(id => {
+        const highlight = highlights.value.find(h => h.id === id)
+        if (highlight) {
+          const material = materials.value.find(m => m.id === highlight.materialId)
+          return {
+            ...highlight,
+            materialTitle: material ? material.title : 'Unknown'
+          }
+        }
+        return null
+      }).filter(h => h !== null)
+    })
+    
+    // Method to delete a highlight from selection
+    const deleteHighlight = (highlightId) => {
+      const index = selectedHighlightIds.value.indexOf(highlightId)
+      if (index > -1) {
+        selectedHighlightIds.value.splice(index, 1)
+      }
+    }
     
     const { apiService } = useApiService()
     const { getAllMaterials } = useMaterialService()
@@ -126,23 +251,18 @@ export default {
     }
     
     const onMaterialsChange = async () => {
-      selectedHighlightIds.value = []
       materialHighlights.value = []
       
-      if (selectedMaterialIds.value.length > 0) {
+      if (selectedMaterialId.value) {
         try {
-          // Load highlights for each selected material
-          const allHighlights = []
-          for (const materialId of selectedMaterialIds.value) {
-            const highlightsData = await getHighlightsByMaterial(materialId)
-            // Add material information to each highlight for grouping
-            const highlightsWithMaterial = highlightsData.map(h => ({
-              ...h,
-              materialId: materialId
-            }))
-            allHighlights.push(...highlightsWithMaterial)
-          }
-          materialHighlights.value = allHighlights
+          // Load highlights for the selected material
+          const highlightsData = await getHighlightsByMaterial(selectedMaterialId.value)
+          // Add material information to each highlight for grouping
+          const highlightsWithMaterial = highlightsData.map(h => ({
+            ...h,
+            materialId: selectedMaterialId.value
+          }))
+          materialHighlights.value = highlightsWithMaterial
         } catch (error) {
           console.error('Error loading material highlights:', error)
         }
@@ -182,10 +302,15 @@ export default {
       highlights,
       selectedHighlightIds,
       materials,
-      selectedMaterialIds,
+      selectedMaterialId,
       materialHighlights,
+      searchQuery,
+      similarSearchEnabled,
+      filteredHighlights,
+      selectedHighlightsList,
       onMaterialsChange,
       startReviewSession,
+      deleteHighlight,
     }
   }
 }
@@ -422,7 +547,7 @@ export default {
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
-.material-checkbox-list {
+.material-radio-list {
   max-height: 250px;
   overflow: auto;
   border: 2px solid #e9ecef;
@@ -432,12 +557,12 @@ export default {
   transition: all 0.3s ease;
 }
 
-.material-checkbox-list:hover {
+.material-radio-list:hover {
   border-color: #4361ee;
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
 }
 
-.material-checkbox-item {
+.material-radio-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -448,20 +573,163 @@ export default {
   margin-bottom: 0.25rem;
 }
 
-.material-checkbox-item:hover {
+.material-radio-item:hover {
   background: rgba(67, 97, 238, 0.05);
 }
 
-.material-checkbox-item input[type="checkbox"] {
+.material-radio-item input[type="radio"] {
   transform: scale(1.2);
   accent-color: #4361ee;
 }
 
-.material-checkbox-label {
+.material-radio-label {
   color: #2c3e50;
   word-break: break-word;
   font-size: 1rem;
   font-weight: 500;
+}
+
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4361ee;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  background: white;
+}
+
+.search-input::placeholder {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.search-options {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.similar-search-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #2c3e50;
+  transition: all 0.2s ease;
+}
+
+.similar-search-toggle:hover {
+  color: #4361ee;
+}
+
+.similar-search-toggle input[type="checkbox"] {
+  transform: scale(1.1);
+  accent-color: #4361ee;
+}
+
+.selected-highlights-summary {
+  text-align: left;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.selected-highlights-list {
+  max-height: 300px;
+  overflow: auto;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  padding: 1rem;
+  background: #f8f9fa;
+  transition: all 0.3s ease;
+}
+
+.selected-highlights-list:hover {
+  border-color: #4361ee;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.selected-highlight-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.selected-highlight-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.selected-highlight-item:last-child {
+  margin-bottom: 0;
+}
+
+.highlight-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.highlight-text {
+  color: #2c3e50;
+  font-weight: 500;
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+.highlight-source {
+  color: #6c757d;
+  font-size: 0.85rem;
+  font-style: italic;
+  background: #e9ecef;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: #dc3545;
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 1rem;
+}
+
+.delete-btn:hover {
+  background: #c82333;
+  transform: scale(1.1);
 }
 
 @media (max-width: 768px) {

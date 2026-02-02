@@ -48,12 +48,44 @@
         </div>
         
         <div class="completion-actions">
-          <router-link to="/review" class="btn">Start Another Session</router-link>
+          <button @click="showAddToTodoModal = true" class="btn">Add to Todo List</button>
+          <router-link to="/review" class="btn btn-secondary">Start Another Session</router-link>
           <router-link to="/vocabulary" class="btn btn-secondary">View Vocabulary</router-link>
         </div>
       </div>
     </div>
-    
+
+    <!-- Add to Todo List Modal -->
+    <div v-if="showAddToTodoModal" class="modal-overlay" @click="closeAddToTodoModal">
+      <div class="modal" @click.stop>
+        <div class="modal-header">
+          <h3>Add Review Session to Todo List</h3>
+          <button @click="closeAddToTodoModal" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="addToTodoList">
+            <div class="form-group">
+              <label class="form-label">Title</label>
+              <input v-model="todoForm.title" type="text" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <textarea v-model="todoForm.description" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Due Date</label>
+              <input v-model="todoForm.dueDate" type="date" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <button type="submit" class="btn" :disabled="addingToTodo">
+                {{ addingToTodo ? 'Adding...' : 'Add to Todo List' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <div v-else class="active-session">
       <!-- Session Progress -->
       <ReviewProgress
@@ -130,6 +162,13 @@ export default {
     const sessionStartTime = ref(null)
     const sessionPaused = ref(false)
     const answerHistory = ref([])
+    const showAddToTodoModal = ref(false)
+    const addingToTodo = ref(false)
+    const todoForm = ref({
+      title: '',
+      description: '',
+      dueDate: ''
+    })
 
     // Computed properties
     const strongAreas = computed(() => {
@@ -339,6 +378,36 @@ export default {
       }
     }
 
+    const closeAddToTodoModal = () => {
+      showAddToTodoModal.value = false
+      todoForm.value = {
+        title: `Review Session - ${new Date().toLocaleDateString()}`,
+        description: `Review session completed with ${session.value.correctAnswers}/${session.value.totalQuestions} correct answers (${calculateAccuracy()}% accuracy).`,
+        dueDate: ''
+      }
+    }
+
+    const addToTodoList = async () => {
+      addingToTodo.value = true
+      try {
+        const todoData = {
+          title: todoForm.value.title,
+          description: todoForm.value.description,
+          dueDate: todoForm.value.dueDate,
+          type: 'REVIEW_SESSION'
+        }
+        
+        await apiService.post('/todos', todoData)
+        closeAddToTodoModal()
+        alert('Review session added to todo list successfully!')
+      } catch (error) {
+        console.error('Error adding to todo list:', error)
+        alert('Failed to add review session to todo list. Please try again.')
+      } finally {
+        addingToTodo.value = false
+      }
+    }
+
     // Lifecycle
     onMounted(() => {
       loadSession()
@@ -354,6 +423,9 @@ export default {
       sessionStartTime,
       sessionPaused,
       answerHistory,
+      showAddToTodoModal,
+      addingToTodo,
+      todoForm,
       strongAreas,
       weakAreas,
       submitAnswer,
@@ -362,7 +434,9 @@ export default {
       goNext,
       confirmEndSession,
       calculateAccuracy,
-      formatDuration
+      formatDuration,
+      closeAddToTodoModal,
+      addToTodoList
     }
   }
 }
@@ -494,6 +568,78 @@ export default {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6c757d;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 1rem;
+  background-color: #fff;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
 @media (max-width: 768px) {

@@ -1,5 +1,34 @@
 <template>
   <div class="review-question">
+    <!-- Selected Highlights List -->
+    <div class="selected-highlights-section">
+      <h4>Selected Highlights</h4>
+      <p class="selected-count">{{ selectedHighlights.length }} highlights selected</p>
+      
+      <div class="highlights-list" v-if="selectedHighlights.length > 0">
+        <div
+          v-for="highlight in selectedHighlights"
+          :key="highlight.id"
+          class="highlight-list-item"
+        >
+          <div class="highlight-info">
+            <span class="highlight-text-preview">{{ highlight.text }}</span>
+            <span class="highlight-material">From: {{ highlight.materialTitle }}</span>
+          </div>
+          <button
+            @click="$emit('delete-highlight', highlight.id)"
+            class="delete-highlight-btn"
+            title="Remove from selection"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+      <div v-else class="no-highlights">
+        No highlights selected yet
+      </div>
+    </div>
+    
     <!-- Question Header -->
     <div class="question-header">
       <h4>What does this word/phrase mean?</h4>
@@ -75,9 +104,13 @@ export default {
     submitting: {
       type: Boolean,
       default: false
+    },
+    selectedHighlights: {
+      type: Array,
+      default: () => []
     }
   },
-  emits: ['answer-selected'],
+  emits: ['answer-selected', 'delete-highlight'],
   setup(props, { emit }) {
     const showComment = ref(false)
 
@@ -271,6 +304,105 @@ export default {
 
 .btn-toggle-comment:hover {
   background-color: #e0a800;
+}
+
+.selected-highlights-section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+}
+
+.selected-highlights-section h4 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.selected-count {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+}
+
+.highlights-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  background: white;
+  padding: 0.5rem;
+}
+
+.highlight-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+}
+
+.highlight-list-item:hover {
+  background-color: #f8f9fa;
+}
+
+.highlight-list-item:last-child {
+  border-bottom: none;
+}
+
+.highlight-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.highlight-text-preview {
+  color: #2c3e50;
+  font-weight: 500;
+  font-size: 1rem;
+  word-break: break-word;
+  max-width: 300px;
+}
+
+.highlight-material {
+  color: #6c757d;
+  font-size: 0.85rem;
+  font-style: italic;
+  background: #e9ecef;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.delete-highlight-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: #dc3545;
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.delete-highlight-btn:hover {
+  background: #c82333;
+  transform: scale(1.1);
+}
+
+.no-highlights {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+  font-style: italic;
 }
 
 
