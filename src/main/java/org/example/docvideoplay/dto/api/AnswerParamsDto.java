@@ -6,8 +6,8 @@ import javax.validation.constraints.NotNull;
 
 public class AnswerParamsDto {
     
-    @NotNull(message = "Highlight ID is required")
-    private Long highlightId;
+    @NotNull(message = "Card ID is required")
+    private Long cardId;
     
     @NotNull(message = "Answer quality is required")
     private AnswerQuality quality;
@@ -17,19 +17,19 @@ public class AnswerParamsDto {
     // Constructors
     public AnswerParamsDto() {}
     
-    public AnswerParamsDto(Long highlightId, AnswerQuality quality, Integer responseTimeSeconds) {
-        this.highlightId = highlightId;
+    public AnswerParamsDto(Long cardId, AnswerQuality quality, Integer responseTimeSeconds) {
+        this.cardId = cardId;
         this.quality = quality;
         this.responseTimeSeconds = responseTimeSeconds;
     }
     
     // Getters and Setters
-    public Long getHighlightId() {
-        return highlightId;
+    public Long getCardId() {
+        return cardId;
     }
     
-    public void setHighlightId(Long highlightId) {
-        this.highlightId = highlightId;
+    public void setCardId(Long cardId) {
+        this.cardId = cardId;
     }
     
     public AnswerQuality getQuality() {

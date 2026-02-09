@@ -1,0 +1,21 @@
+1：
+In that project, my primary role was backend development. I handled the coding tasks and also created the design documentation. I spent time considering how the features would function and how the overall workflow would proceed. Additionally, I collaborated closely with my supervisor, testers, and frontend developers to ensure that the backend and frontend worked seamlessly together. That’s essentially what my daily work involved.
+
+In terms of who I spend the most time working with, it’s definitely the testers. As a backend developer, after coding, I need to test my work thoroughly. Once I’m confident, I push the code to the development environment, and then the testers review it. They often find bugs, and we collaborate to fix those issues. This process of continuous feedback and improvement is quite common in our work.
+
+So, overall, I spend the most time working with testers, and that’s a big part of my daily routine.
+
+2：
+When it comes to the types of things I work on with others, it’s mainly related to coding, as I mentioned. While I do spend a lot of time coding independently, I also participate in meetings where we discuss the project details. In these meetings, I often raise questions and collaborate with the product manager and testers to clarify any uncertainties. For example, if there’s a potential dependency between different activities in the project, I’ll need to confirm those details with the product manager and communicate with the testers to ensure everything aligns correctly.
+
+In short, aside from coding, I spend a lot of time discussing project requirements and resolving issues with both the product management team and the testers. That’s how I collaborate with others on a daily basis.
+
+3：
+Yes, there are definitely times when I work better on my own. With the advancement of AI, I can rely on it for coding assistance. By clearly explaining the requirements to the AI, it can generate high-quality code that I can review and run in my development environment. Of course, while AI is powerful, it’s still important for me to ensure that the code meets all the project requirements. Sometimes, I might need to make adjustments or catch things that the AI misses. In the end, the combination of my own expertise and AI support allows me to produce reliable, bug-free code.
+
+4：
+In my opinion, it’s not absolutely essential to like the people you work with. While it’s certainly nice to have a positive relationship, the primary focus at work should be on professionalism and getting the job done. Of course, if you develop friendships, that can be a positive bonus, but it shouldn’t be a requirement.
+
+One reason is that personal relationships can complicate professional responsibilities. For example, if a mistake happens, it might become more difficult to separate personal feelings from professional accountability. Another factor is that work is ultimately about achieving goals, and sometimes personal connections can influence those dynamics.
+
+In short, while it’s great to have good relationships at work, it’s not absolutely necessary. It’s best to focus on professionalism and let any friendships develop naturally.

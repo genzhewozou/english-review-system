@@ -23,7 +23,7 @@
           @click="$emit('toggle-highlight-mode')"
           :icon="Edit"
         >
-          Exit Highlighting
+          Exit Selection
         </el-button>
         <el-button
           v-else
@@ -32,7 +32,7 @@
           @click="$emit('toggle-highlight-mode')"
           :icon="Plus"
         >
-          Start Highlighting
+          Start Selection
         </el-button>
       </div>
     </div>
@@ -58,7 +58,7 @@
           :class="{
             'active': currentSegment === index,
             'highlight-mode': highlightMode,
-            'has-highlights': getSegmentHighlights(segment).length > 0
+            'has-cards': getSegmentCards(segment).length > 0
           }"
           @click="seekToSegment(segment)"
           @mouseup="handleTranscriptSelection(segment, index, $event)"
@@ -78,17 +78,17 @@
           <!-- Segment Text with Highlights -->
           <div class="segment-text" v-html="getHighlightedSegmentText(segment)"></div>
 
-          <!-- Segment Highlights -->
-          <div v-if="getSegmentHighlights(segment).length > 0" class="segment-highlights">
+          <!-- Segment Cards -->
+          <div v-if="getSegmentCards(segment).length > 0" class="segment-cards">
             <div
-              v-for="highlight in getSegmentHighlights(segment)"
-              :key="highlight.id"
-              class="segment-highlight-item"
-              @click.stop="$emit('highlight-clicked', highlight)"
+              v-for="card in getSegmentCards(segment)"
+              :key="card.id"
+              class="segment-card-item"
+              @click.stop="$emit('card-clicked', card)"
             >
-              <span class="highlight-text">"{{ highlight.text }}"</span>
-              <span v-if="highlight.userComment" class="highlight-comment">
-                - {{ truncateText(highlight.userComment, 50) }}
+              <span class="card-text">"{{ card.text }}"</span>
+              <span v-if="card.userComment" class="card-comment">
+                - {{ truncateText(card.userComment, 50) }}
               </span>
             </div>
           </div>
@@ -102,11 +102,19 @@
       ref="transcriptPopup"
       class="transcript-selection-popup"
       :style="transcriptPopupStyle"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="transcript-popup-title"
+      aria-describedby="transcript-popup-description"
+      tabindex="0"
+      @keydown.esc="closeTranscriptPopup"
+      @keydown.enter="createTranscriptHighlight"
+      @keydown.tab="handlePopupTabKey"
     >
       <div class="popup-content">
-        <div class="selected-info">
+        <div class="selected-info" id="transcript-popup-description">
           <div class="selected-text">
-            <strong>Selected:</strong> "{{ selectedTranscriptText.text }}"
+            <strong id="transcript-popup-title">Selected:</strong> "{{ selectedTranscriptText.text }}"
           </div>
           <div class="selected-timestamp">
             <el-icon><Clock /></el-icon>
@@ -117,16 +125,20 @@
           <el-button 
             type="primary" 
             size="small"
-            @click="createTranscriptHighlight"
+            @click="createTranscriptCard"
             :icon="Plus"
+            tabindex="0"
+            aria-label="Create card"
           >
-            Create Highlight
+            Create Card
           </el-button>
           <el-button 
             type="default" 
             size="small"
             @click="closeTranscriptPopup"
             :icon="Close"
+            tabindex="0"
+            aria-label="Cancel"
           >
             Cancel
           </el-button>
@@ -139,6 +151,8 @@
       v-if="showTranscriptPopup"
       class="popup-overlay"
       @click="closeTranscriptPopup"
+      aria-hidden="true"
+      role="presentation"
     ></div>
   </div>
 </template>
@@ -168,7 +182,7 @@ export default {
       type: Array,
       default: () => []
     },
-    highlights: {
+    cards: {
       type: Array,
       default: () => []
     },
@@ -188,7 +202,7 @@ export default {
   emits: [
     'seek-to-time',
     'text-selected',
-    'highlight-clicked',
+    'card-clicked',
     'toggle-highlight-mode'
   ],
   setup(props, { emit }) {
@@ -244,30 +258,30 @@ export default {
       emit('seek-to-time', segment.startTime)
     }
 
-    const getSegmentHighlights = (segment) => {
-      return props.highlights.filter(highlight => 
-        highlight.timestamp >= segment.startTime && 
-        highlight.timestamp < segment.endTime
+    const getSegmentCards = (segment) => {
+      return props.cards.filter(card => 
+        card.timestamp >= segment.startTime && 
+        card.timestamp < segment.endTime
       )
     }
 
     const getHighlightedSegmentText = (segment) => {
-      const segmentHighlights = getSegmentHighlights(segment)
+      const segmentCards = getSegmentCards(segment)
       
-      if (segmentHighlights.length === 0) {
+      if (segmentCards.length === 0) {
         return segment.text
       }
 
       let text = segment.text
-      const sortedHighlights = [...segmentHighlights].sort((a, b) => b.startPosition - a.startPosition)
+      const sortedCards = [...segmentCards].sort((a, b) => b.startPosition - a.startPosition)
 
       // Apply highlights in reverse order to maintain positions
-      sortedHighlights.forEach(highlight => {
-        const beforeText = text.substring(0, highlight.startPosition)
-        const highlightText = text.substring(highlight.startPosition, highlight.endPosition)
-        const afterText = text.substring(highlight.endPosition)
+      sortedCards.forEach(card => {
+        const beforeText = text.substring(0, card.startPosition)
+        const highlightText = text.substring(card.startPosition, card.endPosition)
+        const afterText = text.substring(card.endPosition)
         
-        const highlightHtml = `<span class="transcript-highlight" data-highlight-id="${highlight.id}" title="${highlight.userComment || ''}">${highlightText}</span>`
+        const highlightHtml = `<span class="transcript-highlight" data-card-id="${card.id}" title="${card.userComment || ''}">${highlightText}</span>`
         text = beforeText + highlightHtml + afterText
       })
 
@@ -280,10 +294,10 @@ export default {
       // Check if clicked on existing highlight
       const target = event.target
       if (target.classList.contains('transcript-highlight')) {
-        const highlightId = parseInt(target.dataset.highlightId)
-        const highlight = props.highlights.find(h => h.id === highlightId)
-        if (highlight) {
-          emit('highlight-clicked', highlight)
+        const cardId = parseInt(target.dataset.cardId)
+        const card = props.cards.find(c => c.id === cardId)
+        if (card) {
+          emit('card-clicked', card)
         }
         return
       }
@@ -322,11 +336,18 @@ export default {
 
       // Position popup
       transcriptPopupPosition.value = {
-        x: rect.left + (rect.width / 2) - 100,
+        x: Math.max(10, rect.left + (rect.width / 2) - 150),
         y: rect.bottom + window.scrollY + 10
       }
 
       showTranscriptPopup.value = true
+
+      // Focus the popup for keyboard navigation
+      setTimeout(() => {
+        if (transcriptPopup.value) {
+          transcriptPopup.value.focus()
+        }
+      }, 100)
     }
 
     const getTextPositionInSegment = (segmentElement, node, offset) => {
@@ -350,7 +371,7 @@ export default {
       return position
     }
 
-    const createTranscriptHighlight = () => {
+    const createTranscriptCard = () => {
       if (!selectedTranscriptText.value) return
 
       emit('text-selected', {
@@ -368,6 +389,39 @@ export default {
     const closeTranscriptPopup = () => {
       showTranscriptPopup.value = false
       selectedTranscriptText.value = null
+    }
+
+    const handlePopupTabKey = (event) => {
+      // Get all focusable elements in the current popup
+      const popup = transcriptPopup.value
+      if (!popup) return
+
+      const focusableElements = popup.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+      const focusable = Array.from(focusableElements).filter(el => {
+        return !el.disabled && el.offsetWidth > 0 && el.offsetHeight > 0
+      })
+
+      if (focusable.length === 0) return
+
+      const firstFocusable = focusable[0]
+      const lastFocusable = focusable[focusable.length - 1]
+
+      // Trap tab key within popup
+      if (event.key === 'Tab') {
+        if (event.shiftKey) {
+          // Shift + Tab
+          if (document.activeElement === firstFocusable) {
+            event.preventDefault()
+            lastFocusable.focus()
+          }
+        } else {
+          // Tab
+          if (document.activeElement === lastFocusable) {
+            event.preventDefault()
+            firstFocusable.focus()
+          }
+        }
+      }
     }
 
     const clearSelection = () => {
@@ -406,11 +460,13 @@ export default {
 
     // Lifecycle
     onMounted(() => {
-      document.addEventListener('click', handleClickOutside)
-      document.addEventListener('keydown', handleKeyDown)
+      // Use passive event listeners where appropriate
+      document.addEventListener('click', handleClickOutside, { passive: true })
+      document.addEventListener('keydown', handleKeyDown, { passive: true })
     })
 
     onUnmounted(() => {
+      // Clean up event listeners
       document.removeEventListener('click', handleClickOutside)
       document.removeEventListener('keydown', handleKeyDown)
     })
@@ -427,11 +483,12 @@ export default {
       showTranscriptPopup,
       transcriptPopupStyle,
       seekToSegment,
-      getSegmentHighlights,
+      getSegmentCards,
       getHighlightedSegmentText,
       handleTranscriptSelection,
-      createTranscriptHighlight,
+      createTranscriptCard,
       closeTranscriptPopup,
+      handlePopupTabKey,
       formatTimestamp,
       truncateText
     }
@@ -517,7 +574,7 @@ export default {
   user-select: text;
 }
 
-.transcript-segment.has-highlights {
+.transcript-segment.has-cards {
   border-left: 3px solid #ffc107;
 }
 
@@ -533,13 +590,13 @@ export default {
   word-wrap: break-word;
 }
 
-.segment-highlights {
+.segment-cards {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
   border-top: 1px solid #ebeef5;
 }
 
-.segment-highlight-item {
+.segment-card-item {
   display: block;
   padding: 0.25rem 0;
   font-size: 0.85rem;
@@ -548,16 +605,16 @@ export default {
   transition: color 0.2s ease;
 }
 
-.segment-highlight-item:hover {
+.segment-card-item:hover {
   color: #409eff;
 }
 
-.highlight-text {
+.card-text {
   font-weight: 600;
   color: #ffc107;
 }
 
-.highlight-comment {
+.card-comment {
   font-style: italic;
 }
 
@@ -580,11 +637,11 @@ export default {
 /* Popup styling */
 .transcript-selection-popup {
   position: fixed;
-  z-index: 1000;
+  z-index: var(--z-popover);
   background: white;
   border: 1px solid #ebeef5;
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
   min-width: 250px;
   max-width: 350px;
 }
@@ -627,7 +684,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 999;
+  z-index: var(--z-modal-backdrop);
   background: transparent;
 }
 

@@ -25,14 +25,36 @@ public interface ReviewApi {
     ResponseEntity<ReviewSessionResultDto> startReviewSession();
     
     /**
-     * Start a new review session with a specific set of highlights.
+     * Start a new review session with a specific set of cards.
      *
-     * @param highlightIds List of highlight IDs to include in the session
+     * @param cardIds List of card IDs to include in the session
      * @return ResponseEntity containing the created review session details
      */
     @PostMapping("/sessions/custom")
     ResponseEntity<ReviewSessionResultDto> startCustomReviewSession(
-            @RequestBody List<Long> highlightIds
+            @RequestBody List<Long> cardIds
+    );
+    
+    /**
+     * Start a new review session with all cards from a deck.
+     *
+     * @param deckId The ID of the deck
+     * @return ResponseEntity containing the created review session details
+     */
+    @PostMapping("/sessions/deck/{deckId}")
+    ResponseEntity<ReviewSessionResultDto> startDeckReviewSession(
+            @PathVariable Long deckId
+    );
+    
+    /**
+     * Start a new review session with due cards from a deck.
+     *
+     * @param deckId The ID of the deck
+     * @return ResponseEntity containing the created review session details
+     */
+    @PostMapping("/sessions/deck/{deckId}/due")
+    ResponseEntity<ReviewSessionResultDto> startDeckDueReviewSession(
+            @PathVariable Long deckId
     );
     
     /**
@@ -45,7 +67,7 @@ public interface ReviewApi {
     ResponseEntity<QuestionResultDto> getNextQuestion(@PathVariable Long sessionId);
 
     /**
-     * Get all questions (highlights) for a review session in order.
+     * Get all questions (cards) for a review session in order.
      * This supports prev/next navigation on the client.
      *
      * @param sessionId The review session ID
@@ -58,7 +80,7 @@ public interface ReviewApi {
      * Submit an answer for a question in a review session
      * 
      * @param sessionId The review session ID
-     * @param answer The answer parameters (highlightId, quality, responseTime)
+     * @param answer The answer parameters (cardId, quality, responseTime)
      * @return ResponseEntity with no content
      */
     @PostMapping("/sessions/{sessionId}/answers")

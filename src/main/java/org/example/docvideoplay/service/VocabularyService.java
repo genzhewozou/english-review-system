@@ -1,165 +1,267 @@
 package org.example.docvideoplay.service;
 
-import org.example.docvideoplay.entity.Highlight;
+import org.example.docvideoplay.entity.Card;
 import org.example.docvideoplay.entity.StudyMaterial;
 
 import java.util.List;
 
 /**
- * Service for managing vocabulary highlights and comments.
- * Handles highlight creation, retrieval, and comment management for study materials.
+ * Service for managing vocabulary cards and comments.
+ * Handles card creation, retrieval, and comment management for study materials.
  */
 public interface VocabularyService {
     
     /**
-     * Create a new highlight for a study material.
+     * Create a new card from highlighted text in a study material.
      * Automatically schedules the initial 5-day reminder using spaced repetition.
      * 
+     * @param userId The ID of the user creating the card
      * @param materialId The ID of the study material
-     * @param text The highlighted text
-     * @param context The surrounding context of the highlight
-     * @param startPosition The start position of the highlight in the text
-     * @param endPosition The end position of the highlight in the text
-     * @return The created Highlight entity
+     * @param text The card front text
+     * @param context The surrounding context
+     * @param startPosition The start position in the text
+     * @param endPosition The end position in the text
+     * @return The created Card entity
      * @throws IllegalArgumentException if material not found or invalid parameters
      */
-    Highlight createHighlight(Long materialId, String text, String context, Integer startPosition, Integer endPosition);
+    Card createCardFromHighlight(Long userId, Long materialId, String text, String context, Integer startPosition, Integer endPosition);
     
     /**
-     * Create a new highlight with an initial comment.
+     * Create a new card from highlighted text with an initial comment.
      * 
+     * @param userId The ID of the user creating the card
      * @param materialId The ID of the study material
-     * @param text The highlighted text
-     * @param context The surrounding context of the highlight
-     * @param startPosition The start position of the highlight in the text
-     * @param endPosition The end position of the highlight in the text
-     * @param userComment The initial comment for the highlight
-     * @return The created Highlight entity
+     * @param text The card front text
+     * @param context The surrounding context
+     * @param startPosition The start position in the text
+     * @param endPosition The end position in the text
+     * @param userComment The initial comment for the card
+     * @return The created Card entity
      * @throws IllegalArgumentException if material not found or invalid parameters
      */
-    Highlight createHighlightWithComment(Long materialId, String text, String context, 
+    Card createCardFromHighlightWithComment(Long userId, Long materialId, String text, String context,
                                        Integer startPosition, Integer endPosition, String userComment);
     
     /**
-     * Retrieve all highlights for a specific study material ordered by position.
+     * Create a new card from highlighted text with an initial comment and tags.
+     * 
+     * @param userId The ID of the user creating the card
+     * @param materialId The ID of the study material
+     * @param text The card front text
+     * @param context The surrounding context
+     * @param startPosition The start position in the text
+     * @param endPosition The end position in the text
+     * @param userComment The initial comment for the card
+     * @param tags The list of tag IDs to associate with the card
+     * @return The created Card entity
+     * @throws IllegalArgumentException if material not found or invalid parameters
+     */
+    Card createCardFromHighlightWithCommentAndTags(Long userId, Long materialId, String text, String context,
+                                               Integer startPosition, Integer endPosition, String userComment, List<Long> tags);
+    
+    /**
+     * Retrieve all cards for a specific study material ordered by position.
      * 
      * @param materialId The ID of the study material
-     * @return List of highlights ordered by start position
+     * @return List of cards ordered by start position
      * @throws IllegalArgumentException if material not found
      */
-    List<Highlight> getHighlightsByMaterial(Long materialId);
+    List<Card> getCardsByMaterial(Long materialId);
     
     /**
-     * Retrieve all highlights for a specific study material with review history loaded.
+     * Retrieve all cards for a specific study material ordered by position for a specific user.
+     * 
+     * @param userId The ID of the user who created the cards
+     * @param materialId The ID of the study material
+     * @return List of cards ordered by start position
+     * @throws IllegalArgumentException if material not found
+     */
+    List<Card> getCardsByMaterial(Long userId, Long materialId);
+    
+    /**
+     * Retrieve all cards for a specific study material with review history loaded.
      * 
      * @param materialId The ID of the study material
-     * @return List of highlights with review history eagerly loaded
+     * @return List of cards with review history eagerly loaded
      * @throws IllegalArgumentException if material not found
      */
-    List<Highlight> getHighlightsByMaterialWithHistory(Long materialId);
+    List<Card> getCardsByMaterialWithHistory(Long materialId);
     
     /**
-     * Retrieve a specific highlight by ID.
+     * Retrieve all cards for a specific study material with review history loaded for a specific user.
      * 
-     * @param highlightId The ID of the highlight
-     * @return The highlight entity
-     * @throws IllegalArgumentException if highlight not found
+     * @param userId The ID of the user who created the cards
+     * @param materialId The ID of the study material
+     * @return List of cards with review history eagerly loaded
+     * @throws IllegalArgumentException if material not found
      */
-    Highlight getHighlightById(Long highlightId);
+    List<Card> getCardsByMaterialWithHistory(Long userId, Long materialId);
     
     /**
-     * Update the comment for an existing highlight.
+     * Retrieve a specific card by ID.
      * 
-     * @param highlightId The ID of the highlight
+     * @param cardId The ID of the card
+     * @return The card entity
+     * @throws IllegalArgumentException if card not found
+     */
+    Card getCardById(Long cardId);
+    
+    /**
+     * Retrieve a specific card by ID for a specific user.
+     * 
+     * @param cardId The ID of the card
+     * @param userId The ID of the user who owns the card
+     * @return The card entity
+     * @throws IllegalArgumentException if card not found or not owned by user
+     */
+    Card getCardById(Long cardId, Long userId);
+    
+    /**
+     * Update the comment for an existing card.
+     * 
+     * @param cardId The ID of the card
      * @param comment The new comment text
-     * @return The updated Highlight entity
-     * @throws IllegalArgumentException if highlight not found
+     * @param userId The ID of the user who owns the card
+     * @return The updated Card entity
+     * @throws IllegalArgumentException if card not found or not owned by user
      */
-    Highlight updateHighlightComment(Long highlightId, String comment);
+    Card updateCardComment(Long cardId, String comment, Long userId);
     
     /**
-     * Update the text and context of an existing highlight.
+     * Update the text and context of an existing card.
      * 
-     * @param highlightId The ID of the highlight
-     * @param text The new highlighted text
+     * @param cardId The ID of the card
+     * @param text The new front text
      * @param context The new context
-     * @return The updated Highlight entity
-     * @throws IllegalArgumentException if highlight not found
+     * @param userId The ID of the user who owns the card
+     * @return The updated Card entity
+     * @throws IllegalArgumentException if card not found or not owned by user
      */
-    Highlight updateHighlightText(Long highlightId, String text, String context);
+    Card updateCardText(Long cardId, String text, String context, Long userId);
     
     /**
-     * Update the position of an existing highlight.
+     * Update the position of an existing card.
      * 
-     * @param highlightId The ID of the highlight
+     * @param cardId The ID of the card
      * @param startPosition The new start position
      * @param endPosition The new end position
-     * @return The updated Highlight entity
-     * @throws IllegalArgumentException if highlight not found or invalid positions
+     * @param userId The ID of the user who owns the card
+     * @return The updated Card entity
+     * @throws IllegalArgumentException if card not found, not owned by user, or invalid positions
      */
-    Highlight updateHighlightPosition(Long highlightId, Integer startPosition, Integer endPosition);
+    Card updateCardPosition(Long cardId, Integer startPosition, Integer endPosition, Long userId);
     
     /**
-     * Delete a highlight and all its associated review records.
+     * Delete a card and all its associated review records.
      * 
-     * @param highlightId The ID of the highlight to delete
-     * @throws IllegalArgumentException if highlight not found
+     * @param cardId The ID of the card to delete
+     * @param userId The ID of the user who owns the card
+     * @throws IllegalArgumentException if card not found or not owned by user
      */
-    void deleteHighlight(Long highlightId);
+    void deleteCard(Long cardId, Long userId);
     
     /**
-     * Search highlights by text content (case insensitive).
+     * Search cards by text content (case insensitive).
      * 
      * @param searchText The text to search for
-     * @return List of highlights containing the search text
+     * @return List of cards containing the search text
      */
-    List<Highlight> searchHighlightsByText(String searchText);
+    List<Card> searchCardsByText(String searchText);
     
     /**
-     * Get all highlights across all materials.
+     * Get all cards across all materials.
      * 
-     * @return List of all highlights ordered by creation date
+     * @return List of all cards ordered by creation date
      */
-    List<Highlight> getAllHighlights();
+    List<Card> getAllCards();
     
     /**
-     * Get all highlights that have user comments.
+     * Get all cards for a specific user.
      * 
-     * @return List of highlights with comments ordered by creation date
+     * @param userId The ID of the user who created the cards
+     * @return List of cards ordered by creation date
      */
-    List<Highlight> getHighlightsWithComments();
+    List<Card> getAllCards(Long userId);
     
     /**
-     * Get highlights that have never been reviewed.
+     * Get all cards that have user comments.
      * 
-     * @return List of highlights with no review history
+     * @return List of cards with comments ordered by creation date
      */
-    List<Highlight> getNeverReviewedHighlights();
+    List<Card> getCardsWithComments();
     
     /**
-     * Get the count of highlights for a specific material.
+     * Get all cards with comments for a specific user.
+     * 
+     * @param userId The ID of the user who created the cards
+     * @return List of cards with comments ordered by creation date
+     */
+    List<Card> getCardsWithComments(Long userId);
+    
+    /**
+     * Get cards that have never been reviewed.
+     * 
+     * @return List of cards with no review history
+     */
+    List<Card> getNeverReviewedCards();
+    
+    /**
+     * Get cards that have never been reviewed for a specific user.
+     * 
+     * @param userId The ID of the user who created the cards
+     * @return List of cards with no review history
+     */
+    List<Card> getNeverReviewedCards(Long userId);
+    
+    /**
+     * Get the count of cards for a specific material.
      * 
      * @param materialId The ID of the study material
-     * @return Count of highlights for the material
+     * @return Count of cards for the material
      */
-    long getHighlightCountByMaterial(Long materialId);
+    long getCardCountByMaterial(Long materialId);
     
     /**
-     * Get highlights due for review today.
+     * Get the count of cards for a specific material and user.
      * 
-     * @return List of highlights due for review today
+     * @param userId The ID of the user who created the cards
+     * @param materialId The ID of the study material
+     * @return Count of cards for the material and user
      */
-    List<Highlight> getHighlightsDueToday();
+    long getCardCountByMaterial(Long userId, Long materialId);
     
     /**
-     * Get overdue highlights (past due date).
+     * Get cards due for review today.
      * 
-     * @return List of overdue highlights ordered by due date
+     * @return List of cards due for review today
      */
-    List<Highlight> getOverdueHighlights();
+    List<Card> getCardsDueToday();
     
     /**
-     * Validate highlight position parameters.
+     * Get cards due for review today for a specific user.
+     * 
+     * @param userId The ID of the user who created the cards
+     * @return List of cards due for review today
+     */
+    List<Card> getCardsDueToday(Long userId);
+    
+    /**
+     * Get overdue cards (past due date).
+     * 
+     * @return List of overdue cards ordered by due date
+     */
+    List<Card> getOverdueCards();
+    
+    /**
+     * Get overdue cards (past due date) for a specific user.
+     * 
+     * @param userId The ID of the user who created the cards
+     * @return List of overdue cards ordered by due date
+     */
+    List<Card> getOverdueCards(Long userId);
+    
+    /**
+     * Validate card position parameters.
      * 
      * @param startPosition The start position
      * @param endPosition The end position

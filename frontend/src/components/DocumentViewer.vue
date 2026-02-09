@@ -1,16 +1,16 @@
 <template>
   <div class="document-viewer">
-    <div class="viewer-toolbar" v-if="highlightMode">
-      <el-alert
-        title="Document Highlighting"
-        description="Select text in the document to create highlights. Click on existing highlights to view or edit them."
-        type="info"
-        :closable="false"
-        show-icon
-      />
-    </div>
+    <div class="viewer-toolbar" v-if="selectionMode">
+          <el-alert
+            title="Document Text Selection"
+            description="Select text in the document to create cards. Click on existing cards to view or edit them."
+            type="info"
+            :closable="false"
+            show-icon
+          />
+        </div>
 
-    <div class="document-content" :class="{ 'highlight-mode': highlightMode }">
+    <div class="document-content" :class="{ 'selection-mode': selectionMode }">
       <!-- Loading State -->
       <div v-if="loading" class="loading-state">
         <el-skeleton :rows="5" animated />
@@ -42,7 +42,7 @@
         </div>
 
         <!-- Text Highlighter -->
-        <div class="text-highlighter" :class="{ 'highlight-mode': highlightMode }">
+        <div class="text-highlighter" :class="{ 'selection-mode': selectionMode }">
           <div 
             ref="textContainer"
             class="text-content"
@@ -61,8 +61,11 @@
                 Selected: "{{ selectedText }}"
               </div>
               <div class="popup-actions">
-                <button @click="createHighlight" class="btn-primary">
-                  Create Highlight
+                <button @click="speakText(selectedText)" class="btn-primary">
+                  Speak
+                </button>
+                <button @click="createCard" class="btn-primary">
+                  Create Card
                 </button>
                 <button @click="closePopup" class="btn-secondary">
                   Cancel
@@ -71,21 +74,61 @@
             </div>
           </div>
         </div>
+        
+        <!-- Pagination Controls -->
+        <div v-if="totalPages > 1" class="pagination-controls">
+          <div class="pagination-info">
+            Page {{ currentPage }} of {{ totalPages }}
+          </div>
+          <div class="pagination-buttons">
+            <button 
+              @click="prevPage"
+              :disabled="currentPage === 1"
+              class="pagination-btn"
+            >
+              Previous
+            </button>
+            <div class="page-numbers">
+              <button 
+                v-for="page in Math.min(5, totalPages)"
+                :key="page"
+                @click="goToPage(page)"
+                :class="['page-btn', { active: currentPage === page }]"
+              >
+                {{ page }}
+              </button>
+              <button 
+                v-if="totalPages > 5"
+                @click="goToPage(totalPages)"
+                class="page-btn"
+              >
+                {{ totalPages }}
+              </button>
+            </div>
+            <button 
+              @click="nextPage"
+              :disabled="currentPage === totalPages"
+              class="pagination-btn"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- Existing highlights overlay -->
-      <div v-if="highlights.length > 0" class="highlights-overlay">
-        <h4>Existing Highlights:</h4>
-        <div class="highlight-list">
+      <!-- Existing cards overlay -->
+      <div v-if="cards.length > 0" class="cards-overlay">
+        <h4>Existing Cards:</h4>
+        <div class="card-list">
           <div
-            v-for="highlight in highlights"
-            :key="highlight.id"
-            class="highlight-preview"
-            @click="$emit('highlight-clicked', highlight)"
+            v-for="card in cards"
+            :key="card.id"
+            class="card-preview"
+            @click="$emit('card-clicked', card)"
           >
-            <span class="highlight-text">"{{ highlight.text }}"</span>
-            <span v-if="highlight.userComment" class="highlight-comment">
-              - {{ highlight.userComment }}
+            <span class="card-text">"{{ card.frontText || card.text }}"</span>
+            <span v-if="card.userComment" class="card-comment">
+              - {{ card.userComment }}
             </span>
           </div>
         </div>
@@ -109,16 +152,16 @@ export default {
       type: Object,
       required: true
     },
-    highlights: {
+    cards: {
       type: Array,
       default: () => []
     },
-    highlightMode: {
+    selectionMode: {
       type: Boolean,
       default: false
     }
   },
-  emits: ['text-selected', 'highlight-clicked', 'highlight-deleted', 'toggle-highlight-mode'],
+  emits: ['text-selected', 'card-clicked', 'card-deleted', 'toggle-selection-mode'],
   setup(props, { emit }) {
     const { apiService } = useApiService()
 
@@ -126,6 +169,12 @@ export default {
     const documentContent = ref('')
     const loading = ref(false)
     const error = ref(null)
+    
+    // Pagination state
+    const currentPage = ref(1)
+    const itemsPerPage = ref(5000) // ~5000 characters per page
+    const totalPages = ref(1)
+    const pageContent = ref([])
     
     // Highlighter state
     const textContainer = ref(null)
@@ -135,8 +184,8 @@ export default {
 
     // Computed
     const displayContent = computed(() => {
-      if (documentContent.value) {
-        return documentContent.value
+      if (pageContent.value.length > 0 && pageContent.value[currentPage.value - 1]) {
+        return pageContent.value[currentPage.value - 1]
       }
       // Fallback content for testing
       return `This is sample document content for highlighting.
@@ -169,57 +218,63 @@ The system should detect text selection and show a popup with options to create 
 
     // Methods
     const handleTextSelection = (event) => {
-      console.log('Text selection triggered', { highlightMode: props.highlightMode })
+      console.log('Text selection triggered', { selectionMode: props.selectionMode })
       
-      if (!props.highlightMode) {
+      if (!props.selectionMode) {
         return
       }
 
-      setTimeout(() => {
-        const selection = window.getSelection()
-        const text = selection.toString().trim()
+      const selection = window.getSelection()
+      const text = selection.toString().trim()
+      
+      console.log('Selected text:', text)
+
+      if (text.length === 0) {
+        closePopup()
+        return
+      }
+
+      try {
+        const range = selection.getRangeAt(0)
+        const rect = range.getBoundingClientRect()
         
-        console.log('Selected text:', text)
-
-        if (text.length === 0) {
-          closePopup()
-          return
+        selectedText.value = text
+        popupPosition.value = {
+          x: rect.left + (rect.width / 2) - 100,
+          y: rect.bottom + 10
         }
-
-        if (!textContainer.value?.contains(selection.anchorNode)) {
-          console.log('Selection not in container')
-          return
-        }
-
-        try {
-          const range = selection.getRangeAt(0)
-          const rect = range.getBoundingClientRect()
-          
-          selectedText.value = text
-          popupPosition.value = {
-            x: rect.left + (rect.width / 2) - 100,
-            y: rect.bottom + 10
-          }
-          
-          showPopup.value = true
-          console.log('Showing popup for:', text)
-        } catch (error) {
-          console.error('Error handling selection:', error)
-        }
-      }, 100)
+        
+        showPopup.value = true
+        console.log('Showing popup for:', text)
+      } catch (error) {
+        console.error('Error handling selection:', error)
+      }
     }
 
-    const createHighlight = () => {
-      console.log('Creating highlight:', selectedText.value)
+    const speakText = (text) => {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.lang = 'en-US' // Use English (US) for pronunciation
+        speechSynthesis.speak(utterance)
+        console.log('Speaking text:', text)
+      } else {
+        console.warn('Text-to-speech is not supported in this browser')
+      }
+    }
+
+    const createCard = () => {
+      console.log('Creating card:', selectedText.value)
       
       if (selectedText.value) {
         // Emit the text-selected event to parent
-        emit('text-selected', {
+        const selectionData = {
           text: selectedText.value,
           context: selectedText.value,
           startPosition: 0,
           endPosition: selectedText.value.length
-        })
+        }
+        console.log('Emitting text-selected event:', selectionData)
+        emit('text-selected', selectionData)
       }
       closePopup()
     }
@@ -247,6 +302,66 @@ The system should detect text selection and show a popup with options to create 
       const sizes = ['B', 'KB', 'MB', 'GB']
       const i = Math.floor(Math.log(bytes) / Math.log(k))
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    }
+
+    // Pagination methods
+    const splitContentIntoPages = (content) => {
+      const pages = []
+      const pageSize = itemsPerPage.value
+      
+      for (let i = 0; i < content.length; i += pageSize) {
+        // Try to split at a natural break point (like a paragraph or sentence)
+        let end = Math.min(i + pageSize, content.length)
+        
+        // If we're not at the end of the content, look for a natural break
+        if (end < content.length) {
+          // Try to find the next newline
+          const nextNewline = content.indexOf('\n', end)
+          if (nextNewline !== -1 && nextNewline - i < pageSize * 1.2) {
+            end = nextNewline
+          } else {
+            // Try to find the next space
+            const nextSpace = content.indexOf(' ', end)
+            if (nextSpace !== -1 && nextSpace - i < pageSize * 1.2) {
+              end = nextSpace
+            }
+          }
+        }
+        
+        pages.push(content.substring(i, end))
+      }
+      
+      return pages
+    }
+
+    const updatePagination = () => {
+      if (documentContent.value) {
+        pageContent.value = splitContentIntoPages(documentContent.value)
+        totalPages.value = pageContent.value.length
+        currentPage.value = 1 // Reset to first page when content changes
+      } else {
+        pageContent.value = []
+        totalPages.value = 1
+        currentPage.value = 1
+      }
+    }
+
+    const goToPage = (page) => {
+      if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page
+      }
+    }
+
+    const nextPage = () => {
+      if (currentPage.value < totalPages.value) {
+        currentPage.value++
+      }
+    }
+
+    const prevPage = () => {
+      if (currentPage.value > 1) {
+        currentPage.value--
+      }
     }
 
     const loadDocumentContent = async () => {
@@ -277,7 +392,9 @@ The system should detect text selection and show a popup with options to create 
         }
         
         documentContent.value = content
+        updatePagination() // Update pagination when content is loaded
         console.log('Document content loaded successfully:', content.length, 'characters')
+        console.log('Split into', totalPages.value, 'pages')
       } catch (err) {
         console.error('Error loading document content:', err.message)
         
@@ -320,8 +437,16 @@ The system should detect text selection and show a popup with options to create 
       selectedText,
       displayContent,
       popupStyle,
+      // Pagination
+      currentPage,
+      totalPages,
+      goToPage,
+      nextPage,
+      prevPage,
+      // Methods
       handleTextSelection,
-      createHighlight,
+      createCard,
+      speakText,
       closePopup,
       downloadDocument,
       formatFileSize
@@ -349,7 +474,7 @@ The system should detect text selection and show a popup with options to create 
   border: 2px dashed #d9d9d9;
 }
 
-.document-content.highlight-mode {
+.document-content.selection-mode {
   border-color: #409eff;
   background-color: #f0f9ff;
 }
@@ -412,7 +537,7 @@ The system should detect text selection and show a popup with options to create 
   position: relative;
 }
 
-.text-highlighter.highlight-mode {
+.text-highlighter.selection-mode {
   cursor: text;
   user-select: text;
   border-color: #409eff;
@@ -422,6 +547,7 @@ The system should detect text selection and show a popup with options to create 
 .text-content {
   white-space: pre-wrap;
   word-wrap: break-word;
+  user-select: text;
 }
 
 .selection-popup {
@@ -510,6 +636,81 @@ The system should detect text selection and show a popup with options to create 
   font-style: italic;
 }
 
+.pagination-controls {
+  margin-top: 2rem;
+  padding: 1rem;
+  background-color: white;
+  border-radius: 6px;
+  border: 1px solid #ebeef5;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.pagination-info {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #606266;
+  font-size: 14px;
+}
+
+.pagination-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pagination-btn {
+  padding: 0.5rem 1rem;
+  background-color: #f5f7fa;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  color: #606266;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #ecf5ff;
+  border-color: #c6e2ff;
+  color: #409eff;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.page-btn {
+  padding: 0.375rem 0.75rem;
+  background-color: #f5f7fa;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  color: #606266;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  min-width: 32px;
+  text-align: center;
+}
+
+.page-btn:hover:not(.active) {
+  background-color: #ecf5ff;
+  border-color: #c6e2ff;
+  color: #409eff;
+}
+
+.page-btn.active {
+  background-color: #409eff;
+  border-color: #409eff;
+  color: white;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .document-content {
@@ -518,6 +719,21 @@ The system should detect text selection and show a popup with options to create 
   
   .document-info {
     max-width: none;
+  }
+  
+  .pagination-buttons {
+    flex-wrap: wrap;
+  }
+  
+  .page-numbers {
+    order: 1;
+    width: 100%;
+    justify-content: center;
+    margin: 0.5rem 0;
+  }
+  
+  .pagination-btn {
+    order: 2;
   }
 }
 </style>

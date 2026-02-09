@@ -13,13 +13,11 @@ public class ReviewRecord extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "session_id", nullable = false)
-    private ReviewSession session;
+    @Column(name = "session_id", nullable = false)
+    private Long sessionId;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "highlight_id", nullable = false)
-    private Highlight highlight;
+    @Column(name = "card_id", nullable = false)
+    private Long cardId;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -36,9 +34,9 @@ public class ReviewRecord extends BaseEntity {
         this.reviewTime = LocalDateTime.now();
     }
     
-    public ReviewRecord(ReviewSession session, Highlight highlight, AnswerQuality quality) {
-        this.session = session;
-        this.highlight = highlight;
+    public ReviewRecord(Long sessionId, Long cardId, AnswerQuality quality) {
+        this.sessionId = sessionId;
+        this.cardId = cardId;
         this.quality = quality;
         this.reviewTime = LocalDateTime.now();
     }
@@ -52,20 +50,20 @@ public class ReviewRecord extends BaseEntity {
         this.id = id;
     }
     
-    public ReviewSession getSession() {
-        return session;
+    public Long getSessionId() {
+        return sessionId;
     }
     
-    public void setSession(ReviewSession session) {
-        this.session = session;
+    public void setSessionId(Long sessionId) {
+        this.sessionId = sessionId;
     }
     
-    public Highlight getHighlight() {
-        return highlight;
+    public Long getCardId() {
+        return cardId;
     }
     
-    public void setHighlight(Highlight highlight) {
-        this.highlight = highlight;
+    public void setCardId(Long cardId) {
+        this.cardId = cardId;
     }
     
     public AnswerQuality getQuality() {

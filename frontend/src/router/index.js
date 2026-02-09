@@ -4,10 +4,23 @@ import Materials from '../views/Materials.vue'
 import Vocabulary from '../views/Vocabulary.vue'
 import Review from '../views/Review.vue'
 import TodoList from '../views/TodoList.vue'
-import HighlightTest from '../components/HighlightTest.vue'
-import ApiTest from '../components/ApiTest.vue'
+import Decks from '../views/Decks.vue'
+import Login from '../views/Login.vue'
+import Register from '../views/Register.vue'
 
 const routes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login,
+    meta: { title: 'Login' }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register,
+    meta: { title: 'Register' }
+  },
   {
     path: '/',
     name: 'Dashboard',
@@ -51,16 +64,10 @@ const routes = [
     meta: { title: 'Todo List' }
   },
   {
-    path: '/test-highlight',
-    name: 'HighlightTest',
-    component: HighlightTest,
-    meta: { title: 'Highlight Test' }
-  },
-  {
-    path: '/test-api',
-    name: 'ApiTest',
-    component: ApiTest,
-    meta: { title: 'API Test' }
+    path: '/decks',
+    name: 'Decks',
+    component: Decks,
+    meta: { title: 'Deck Management' }
   }
 ]
 

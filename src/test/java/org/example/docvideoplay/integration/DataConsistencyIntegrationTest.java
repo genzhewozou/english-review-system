@@ -47,7 +47,7 @@ public class DataConsistencyIntegrationTest {
     private StudyMaterialRepository materialRepository;
 
     @Autowired
-    private HighlightRepository highlightRepository;
+    private CardRepository cardRepository;
 
     @Autowired
     private ReviewSessionRepository reviewSessionRepository;
@@ -59,7 +59,7 @@ public class DataConsistencyIntegrationTest {
     private TodoItemRepository todoItemRepository;
 
     @Test
-    void testMaterialHighlightConsistency() throws Exception {
+    void testMaterialCardConsistency() throws Exception {
         // Upload material
         Long materialId = uploadTestMaterial("Test Material", MaterialType.DOCUMENT);
 
@@ -68,45 +68,45 @@ public class DataConsistencyIntegrationTest {
         assertTrue(materialOpt.isPresent());
         StudyMaterial material = materialOpt.get();
         assertEquals("Test Material", material.getTitle());
-        assertEquals(0, material.getHighlights().size());
+        assertEquals(0, cardRepository.findByMaterialIdOrderByStartPositionAsc(materialId).size());
 
-        // Create highlights
-        Long highlight1Id = createTestHighlight(materialId, "word1", "context1");
-        Long highlight2Id = createTestHighlight(materialId, "word2", "context2");
+        // Create cards
+        Long card1Id = createTestCard(materialId, "word1", "context1");
+        Long card2Id = createTestCard(materialId, "word2", "context2");
 
-        // Verify highlights exist and are linked to material
-        Optional<Highlight> highlight1Opt = highlightRepository.findById(highlight1Id);
-        Optional<Highlight> highlight2Opt = highlightRepository.findById(highlight2Id);
+        // Verify cards exist and are linked to material
+        Optional<Card> card1Opt = cardRepository.findById(card1Id);
+        Optional<Card> card2Opt = cardRepository.findById(card2Id);
         
-        assertTrue(highlight1Opt.isPresent());
-        assertTrue(highlight2Opt.isPresent());
+        assertTrue(card1Opt.isPresent());
+        assertTrue(card2Opt.isPresent());
         
-        Highlight highlight1 = highlight1Opt.get();
-        Highlight highlight2 = highlight2Opt.get();
+        Card card1 = card1Opt.get();
+        Card card2 = card2Opt.get();
         
-        assertEquals(materialId, highlight1.getMaterial().getId());
-        assertEquals(materialId, highlight2.getMaterial().getId());
+        assertEquals(materialId, card1.getMaterialId());
+        assertEquals(materialId, card2.getMaterialId());
 
-        // Refresh material and verify highlight count
+        // Refresh material and verify card count
         material = materialRepository.findById(materialId).get();
-        assertEquals(2, material.getHighlights().size());
+        assertEquals(2, cardRepository.findByMaterialIdOrderByStartPositionAsc(materialId).size());
 
         // Verify API returns consistent data
         mockMvc.perform(get("/api/materials/{id}", materialId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.highlightCount").value(2));
+                .andExpect(jsonPath("$.cardCount").value(2));
 
-        mockMvc.perform(get("/api/vocabulary/materials/{materialId}/highlights", materialId))
+        mockMvc.perform(get("/api/cards/material/{materialId}", materialId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
     }
 
     @Test
     void testReviewSessionDataConsistency() throws Exception {
-        // Setup: Create material and highlights
+        // Setup: Create material and cards
         Long materialId = uploadTestMaterial("Review Test Material", MaterialType.DOCUMENT);
-        Long highlight1Id = createTestHighlight(materialId, "review word 1", "context 1");
-        Long highlight2Id = createTestHighlight(materialId, "review word 2", "context 2");
+        Long card1Id = createTestCard(materialId, "review word 1", "context 1");
+        Long card2Id = createTestCard(materialId, "review word 2", "context 2");
 
         // Start review session
         MvcResult sessionResult = mockMvc.perform(post("/api/reviews/sessions"))
@@ -129,17 +129,17 @@ public class DataConsistencyIntegrationTest {
         assertFalse(session.getCompleted());
 
         // Submit answers
-        submitAnswer(sessionId, highlight1Id, AnswerQuality.CORRECT);
-        submitAnswer(sessionId, highlight2Id, AnswerQuality.PERFECT);
+        submitAnswer(sessionId, card1Id, AnswerQuality.CORRECT);
+        submitAnswer(sessionId, card2Id, AnswerQuality.PERFECT);
 
         // Verify review records were created
         List<ReviewRecord> records = reviewRecordRepository.findAll();
         assertEquals(2, records.size());
 
         for (ReviewRecord record : records) {
-            assertEquals(sessionId, record.getSession().getId());
-            assertTrue(record.getHighlight().getId().equals(highlight1Id) || 
-                      record.getHighlight().getId().equals(highlight2Id));
+            assertEquals(sessionId, record.getSessionId());
+            assertTrue(record.getCardId().equals(card1Id) || 
+                      record.getCardId().equals(card2Id));
         }
 
         // Complete session
@@ -158,33 +158,33 @@ public class DataConsistencyIntegrationTest {
 
     @Test
     void testSpacedRepetitionConsistency() throws Exception {
-        // Create material and highlight
+        // Create material and card
         Long materialId = uploadTestMaterial("Spaced Repetition Test", MaterialType.DOCUMENT);
-        Long highlightId = createTestHighlight(materialId, "spaced word", "spaced context");
+        Long cardId = createTestCard(materialId, "spaced word", "spaced context");
 
         // Verify initial spaced repetition values
-        Highlight highlight = highlightRepository.findById(highlightId).get();
-        assertEquals(2.5, highlight.getEaseFactor());
-        assertEquals(0, highlight.getRepetitionCount());
-        assertEquals(1, highlight.getIntervalDays());
-        assertNotNull(highlight.getNextReviewDate());
-        assertNull(highlight.getLastReviewDate());
+        Card card = cardRepository.findById(cardId).get();
+        assertEquals(2.5, card.getEaseFactor());
+        assertEquals(0, card.getRepetitionCount());
+        assertEquals(1, card.getIntervalDays());
+        assertNotNull(card.getNextReviewDate());
+        assertNull(card.getLastReviewDate());
 
         // Start review session and answer
         Long sessionId = startReviewSession();
-        submitAnswer(sessionId, highlightId, AnswerQuality.CORRECT);
+        submitAnswer(sessionId, cardId, AnswerQuality.CORRECT);
         completeReviewSession(sessionId);
 
         // Verify spaced repetition values updated
-        highlight = highlightRepository.findById(highlightId).get();
-        assertEquals(1, highlight.getRepetitionCount());
-        assertEquals(1, highlight.getIntervalDays()); // First correct answer = 1 day interval (SM-2 standard)
-        assertNotNull(highlight.getLastReviewDate());
-        assertNotNull(highlight.getNextReviewDate());
-        assertTrue(highlight.getNextReviewDate().isAfter(LocalDate.now()));
+        card = cardRepository.findById(cardId).get();
+        assertEquals(1, card.getRepetitionCount());
+        assertEquals(1, card.getIntervalDays()); // First correct answer = 1 day interval (SM-2 standard)
+        assertNotNull(card.getLastReviewDate());
+        assertNotNull(card.getNextReviewDate());
+        assertTrue(card.getNextReviewDate().isAfter(LocalDate.now()));
 
         // Verify API consistency
-        mockMvc.perform(get("/api/vocabulary/highlights/{id}", highlightId))
+        mockMvc.perform(get("/api/cards/{id}", cardId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.repetitionCount").value(1))
                 .andExpect(jsonPath("$.intervalDays").value(1)) // First correct answer = 1 day
@@ -194,22 +194,22 @@ public class DataConsistencyIntegrationTest {
 
     @Test
     void testTodoItemConsistency() throws Exception {
-        // Create material and highlight
+        // Create material and card
         Long materialId = uploadTestMaterial("Todo Test Material", MaterialType.DOCUMENT);
-        Long highlightId = createTestHighlight(materialId, "todo word", "todo context");
+        Long cardId = createTestCard(materialId, "todo word", "todo context");
 
         // Verify todo item was created automatically
         List<TodoItem> todoItems = todoItemRepository.findByCompletedFalseOrderByDueDateAsc();
         assertEquals(1, todoItems.size());
         
         TodoItem todoItem = todoItems.get(0);
-        assertEquals(highlightId, todoItem.getRelatedHighlight().getId());
+        assertEquals(cardId, todoItem.getRelatedCardId());
         assertFalse(todoItem.getCompleted());
         assertEquals(LocalDate.now().plusDays(5), todoItem.getDueDate()); // 5-day reminder
 
         // Complete review session
         Long sessionId = startReviewSession();
-        submitAnswer(sessionId, highlightId, AnswerQuality.CORRECT);
+        submitAnswer(sessionId, cardId, AnswerQuality.CORRECT);
         completeReviewSession(sessionId);
 
         // Complete todo item
@@ -222,33 +222,33 @@ public class DataConsistencyIntegrationTest {
         assertTrue(todoItem.getCompleted());
 
         // Verify new todo item was scheduled for next review
-        Highlight highlight = highlightRepository.findById(highlightId).get();
-        LocalDate nextReviewDate = highlight.getNextReviewDate();
+        Card card = cardRepository.findById(cardId).get();
+        LocalDate nextReviewDate = card.getNextReviewDate();
         
         List<TodoItem> futureTodos = todoItemRepository.findByCompletedFalseOrderByDueDateAsc();
         boolean foundNextReviewTodo = futureTodos.stream()
-                .anyMatch(todo -> todo.getRelatedHighlight().getId().equals(highlightId) &&
+                .anyMatch(todo -> todo.getRelatedCardId().equals(cardId) &&
                                  todo.getDueDate().equals(nextReviewDate));
         assertTrue(foundNextReviewTodo, "Next review todo should be scheduled");
     }
 
     @Test
     void testCascadingDeleteConsistency() throws Exception {
-        // Create material with highlights
+        // Create material with cards
         Long materialId = uploadTestMaterial("Delete Test Material", MaterialType.DOCUMENT);
-        Long highlight1Id = createTestHighlight(materialId, "delete word 1", "delete context 1");
-        Long highlight2Id = createTestHighlight(materialId, "delete word 2", "delete context 2");
+        Long card1Id = createTestCard(materialId, "delete word 1", "delete context 1");
+        Long card2Id = createTestCard(materialId, "delete word 2", "delete context 2");
 
         // Create review session with records
         Long sessionId = startReviewSession();
-        submitAnswer(sessionId, highlight1Id, AnswerQuality.CORRECT);
-        submitAnswer(sessionId, highlight2Id, AnswerQuality.PERFECT);
+        submitAnswer(sessionId, card1Id, AnswerQuality.CORRECT);
+        submitAnswer(sessionId, card2Id, AnswerQuality.PERFECT);
         completeReviewSession(sessionId);
 
         // Verify data exists
         assertTrue(materialRepository.existsById(materialId));
-        assertTrue(highlightRepository.existsById(highlight1Id));
-        assertTrue(highlightRepository.existsById(highlight2Id));
+        assertTrue(cardRepository.existsById(card1Id));
+        assertTrue(cardRepository.existsById(card2Id));
         assertTrue(reviewSessionRepository.existsById(sessionId));
         assertEquals(2, reviewRecordRepository.findAll().size());
 
@@ -258,15 +258,15 @@ public class DataConsistencyIntegrationTest {
 
         // Verify cascading deletes
         assertFalse(materialRepository.existsById(materialId));
-        assertFalse(highlightRepository.existsById(highlight1Id));
-        assertFalse(highlightRepository.existsById(highlight2Id));
+        assertFalse(cardRepository.existsById(card1Id));
+        assertFalse(cardRepository.existsById(card2Id));
         
         // Review sessions and records should still exist (they're not tied to material directly)
         assertTrue(reviewSessionRepository.existsById(sessionId));
         assertEquals(2, reviewRecordRepository.findAll().size());
 
-        // Todo items related to deleted highlights should be cleaned up
-        List<TodoItem> remainingTodos = todoItemRepository.findByRelatedHighlightIdOrderByDueDateAsc(highlight1Id);
+        // Todo items related to deleted cards should be cleaned up
+        List<TodoItem> remainingTodos = todoItemRepository.findByRelatedCardIdOrderByDueDateAsc(card1Id);
         assertTrue(remainingTodos.isEmpty());
     }
 
@@ -275,24 +275,24 @@ public class DataConsistencyIntegrationTest {
         // This test verifies that operations are properly transactional
         Long materialId = uploadTestMaterial("Transaction Test", MaterialType.DOCUMENT);
         
-        // Attempt to create highlight with invalid data (should rollback)
-        HighlightParamsDto invalidParams = new HighlightParamsDto();
+        // Attempt to create card with invalid data (should rollback)
+        CardParamsDto invalidParams = new CardParamsDto();
         invalidParams.setMaterialId(materialId);
         invalidParams.setText(""); // Invalid: empty text
         invalidParams.setContext("test context");
 
-        mockMvc.perform(post("/api/vocabulary/highlights")
+        mockMvc.perform(post("/api/cards/from-highlight")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidParams)))
                 .andExpect(status().isBadRequest());
 
-        // Verify no highlight was created
-        List<Highlight> highlights = highlightRepository.findByMaterialIdOrderByStartPositionAsc(materialId);
-        assertEquals(0, highlights.size());
+        // Verify no card was created
+        List<Card> cards = cardRepository.findByMaterialIdOrderByStartPositionAsc(materialId);
+        assertEquals(0, cards.size());
 
-        // Verify material highlight count is still 0
+        // Verify material card count is still 0
         StudyMaterial material = materialRepository.findById(materialId).get();
-        assertEquals(0, material.getHighlights().size());
+        assertEquals(0, cardRepository.findByMaterialIdOrderByStartPositionAsc(materialId).size());
     }
 
     // Helper methods
@@ -320,8 +320,8 @@ public class DataConsistencyIntegrationTest {
         return material.getId();
     }
 
-    private Long createTestHighlight(Long materialId, String text, String context) throws Exception {
-        HighlightParamsDto params = new HighlightParamsDto();
+    private Long createTestCard(Long materialId, String text, String context) throws Exception {
+        CardParamsDto params = new CardParamsDto();
         params.setMaterialId(materialId);
         params.setText(text);
         params.setContext(context);
@@ -329,18 +329,18 @@ public class DataConsistencyIntegrationTest {
         params.setEndPosition(text.length());
         params.setUserComment("Test comment");
 
-        MvcResult result = mockMvc.perform(post("/api/vocabulary/highlights")
+        MvcResult result = mockMvc.perform(post("/api/cards/from-highlight")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(params)))
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        HighlightResultDto highlight = objectMapper.readValue(
+        CardResultDto card = objectMapper.readValue(
                 result.getResponse().getContentAsString(), 
-                HighlightResultDto.class
+                CardResultDto.class
         );
 
-        return highlight.getId();
+        return card.getId();
     }
 
     private Long startReviewSession() throws Exception {
@@ -356,9 +356,9 @@ public class DataConsistencyIntegrationTest {
         return session.getId();
     }
 
-    private void submitAnswer(Long sessionId, Long highlightId, AnswerQuality quality) throws Exception {
+    private void submitAnswer(Long sessionId, Long cardId, AnswerQuality quality) throws Exception {
         AnswerParamsDto answer = new AnswerParamsDto();
-        answer.setHighlightId(highlightId);
+        answer.setCardId(cardId);
         answer.setQuality(quality);
         answer.setResponseTimeSeconds(5);
 

@@ -15,11 +15,11 @@
         <h3>🎉 Session Complete!</h3>
         <div class="completion-stats">
           <div class="stat-item">
-            <strong>{{ session.correctAnswers }}</strong>
+            <strong>{{ session.correctAnswers || 0 }}</strong>
             <span>Correct Answers</span>
           </div>
           <div class="stat-item">
-            <strong>{{ session.totalQuestions }}</strong>
+            <strong>{{ session.totalQuestions || 0 }}</strong>
             <span>Total Questions</span>
           </div>
           <div class="stat-item">
@@ -63,7 +63,7 @@
           <button @click="closeAddToTodoModal" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
-          <form @submit.prevent="addToTodoList">
+          <form @submit.prevent="addToTodoList" class="todo-form">
             <div class="form-group">
               <label class="form-label">Title</label>
               <input v-model="todoForm.title" type="text" class="form-control" required>
@@ -74,10 +74,11 @@
             </div>
             <div class="form-group">
               <label class="form-label">Due Date</label>
-              <input v-model="todoForm.dueDate" type="date" class="form-control" required>
+              <input v-model="todoForm.dueDate" type="date" class="form-control">
             </div>
-            <div class="form-group">
-              <button type="submit" class="btn" :disabled="addingToTodo">
+            <div class="form-actions">
+              <button type="button" @click="closeAddToTodoModal" class="btn btn-secondary">Cancel</button>
+              <button type="submit" class="btn btn-primary" :disabled="addingToTodo">
                 {{ addingToTodo ? 'Adding...' : 'Add to Todo List' }}
               </button>
             </div>
@@ -90,14 +91,19 @@
       <!-- Session Progress -->
       <ReviewProgress
         :current-question="currentQuestionIndex + 1"
-        :total-questions="session.totalQuestions"
-        :correct-answers="session.correctAnswers"
+        :total-questions="session?.totalQuestions || 0"
+        :correct-answers="session?.correctAnswers || 0"
         :session-start-time="sessionStartTime"
         :paused="sessionPaused"
         :answer-history="answerHistory"
         @pause-session="togglePause"
         @end-session="confirmEndSession"
       />
+
+      <!-- Add to Todo List Button -->
+      <div class="session-actions">
+        <button @click="showAddToTodoModal = true" class="btn btn-secondary">Add to Todo List</button>
+      </div>
 
       <!-- Current Question -->
       <div v-if="currentQuestion && !sessionPaused" class="question-container">
@@ -140,6 +146,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useApiService } from '@/composables/useApiService'
 import ReviewProgress from '@/components/ReviewProgress.vue'
 import ReviewQuestion from '@/components/ReviewQuestion.vue'
+import { confirmEndSession as confirmSessionEnd } from '../utils/confirmDialog'
 
 export default {
   name: 'ReviewSession',
@@ -208,6 +215,8 @@ export default {
 
     const loadQuestions = async () => {
       try {
+        if (!session.value) return
+        
         const response = await apiService.get(`/reviews/sessions/${session.value.id}/questions`)
         const list = response.data || []
         questions.value = list
@@ -248,6 +257,8 @@ export default {
 
     const loadNextQuestion = async () => {
       try {
+        if (!session.value) return
+        
         const response = await apiService.get(`/reviews/sessions/${session.value.id}/next-question`)
         const data = response.data
 
@@ -280,7 +291,7 @@ export default {
     }
 
     const submitAnswer = async (quality) => {
-      if (submittingAnswer.value) return
+      if (submittingAnswer.value || !session.value || !currentQuestion.value) return
       
       try {
         submittingAnswer.value = true
@@ -326,6 +337,8 @@ export default {
 
     const completeSession = async () => {
       try {
+        if (!session.value) return
+        
         await apiService.post(`/reviews/sessions/${session.value.id}/complete`)
         session.value.completed = true
         session.value.endTime = new Date()
@@ -352,8 +365,9 @@ export default {
       setCurrentQuestionFromIndex()
     }
 
-    const confirmEndSession = () => {
-      if (confirm('Are you sure you want to end this session? Your progress will be saved.')) {
+    const confirmEndSession = async () => {
+      const confirmed = await confirmSessionEnd()
+      if (confirmed) {
         completeSession()
       }
     }
@@ -380,10 +394,26 @@ export default {
 
     const closeAddToTodoModal = () => {
       showAddToTodoModal.value = false
-      todoForm.value = {
-        title: `Review Session - ${new Date().toLocaleDateString()}`,
-        description: `Review session completed with ${session.value.correctAnswers}/${session.value.totalQuestions} correct answers (${calculateAccuracy()}% accuracy).`,
-        dueDate: ''
+      
+      // Set default form values based on session status
+      if (session.value && session.value.completed) {
+        todoForm.value = {
+          title: `Review Session - ${new Date().toLocaleDateString()}`,
+          description: `Review session completed with ${session.value.correctAnswers}/${session.value.totalQuestions || 0} correct answers (${calculateAccuracy()}% accuracy).`,
+          dueDate: ''
+        }
+      } else if (session.value) {
+        todoForm.value = {
+          title: `Review Session - ${new Date().toLocaleDateString()}`,
+          description: `Active review session in progress: ${currentQuestionIndex + 1}/${session.value.totalQuestions || 0} questions completed.`,
+          dueDate: ''
+        }
+      } else {
+        todoForm.value = {
+          title: `Review Session - ${new Date().toLocaleDateString()}`,
+          description: '',
+          dueDate: ''
+        }
       }
     }
 
@@ -394,7 +424,8 @@ export default {
           title: todoForm.value.title,
           description: todoForm.value.description,
           dueDate: todoForm.value.dueDate,
-          type: 'REVIEW_SESSION'
+          type: 'REVIEW_SESSION',
+          relatedSessionId: session.value?.id
         }
         
         await apiService.post('/todos', todoData)
@@ -451,6 +482,7 @@ export default {
 
 .question-container {
   margin-top: 2rem;
+  animation: fadeIn 0.5s ease forwards;
 }
 
 .question-nav {
@@ -460,19 +492,39 @@ export default {
   gap: 12px;
 }
 
+.question-nav .btn {
+  transition: var(--transition);
+}
+
+.question-nav .btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.question-nav .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .paused-state {
   margin-top: 2rem;
   padding: 3rem 2rem;
+  animation: fadeIn 0.5s ease forwards;
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-md);
 }
 
 .paused-state h4 {
   margin: 0 0 1rem 0;
-  color: #6c757d;
+  color: var(--dark-color);
+  font-size: 1.5rem;
 }
 
 .paused-state p {
   margin: 0 0 2rem 0;
-  color: #6c757d;
+  color: var(--gray-color);
+  font-size: 1.1rem;
 }
 
 .completion-stats {
@@ -480,35 +532,53 @@ export default {
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 24px;
   margin: 32px 0;
+  animation: fadeIn 0.5s ease forwards;
 }
 
 .stat-item {
   text-align: center;
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.stat-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-item strong {
   display: block;
-  font-size: 32px;
-  color: #409eff;
+  font-size: 2.5rem;
+  color: var(--primary-color);
   margin-bottom: 8px;
+  font-weight: 700;
 }
 
 .stat-item span {
-  color: #666;
+  color: var(--gray-color);
   font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .performance-analysis {
   margin: 2rem 0;
   padding: 1.5rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+  background-color: var(--light-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  animation: fadeIn 0.5s ease forwards;
 }
 
 .performance-analysis h4 {
-  margin: 0 0 1rem 0;
-  color: #2c3e50;
+  margin: 0 0 1.5rem 0;
+  color: var(--dark-color);
   text-align: center;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .analysis-grid {
@@ -520,19 +590,25 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
+  padding: 1rem;
   background: white;
-  border-radius: 6px;
-  border-left: 4px solid #007bff;
+  border-radius: var(--border-radius);
+  border-left: 4px solid var(--primary-color);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.analysis-item:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .analysis-label {
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--dark-color);
 }
 
 .analysis-value {
-  color: #6c757d;
+  color: var(--gray-color);
   text-align: right;
   flex: 1;
   margin-left: 1rem;
@@ -544,22 +620,23 @@ export default {
   justify-content: center;
   flex-wrap: wrap;
   margin-top: 2rem;
+  animation: fadeIn 0.5s ease forwards;
 }
 
-.btn-secondary {
-  background-color: #6c757d;
-  color: white;
+.completion-actions .btn {
+  transition: var(--transition);
 }
 
-.btn-secondary:hover {
-  background-color: #5a6268;
+.completion-actions .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .spinner {
   width: 40px;
   height: 40px;
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #007bff;
+  border-top: 4px solid var(--primary-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 1rem;
@@ -581,15 +658,30 @@ export default {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease forwards;
 }
 
 .modal {
   background: white;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   width: 90%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modal-header {
@@ -597,11 +689,16 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #f0f0f0;
+  background-color: var(--light-color);
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
 }
 
 .modal-header h3 {
   margin: 0;
+  color: var(--dark-color);
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .close-btn {
@@ -609,39 +706,93 @@ export default {
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #6c757d;
+  color: var(--gray-color);
+  transition: var(--transition);
+  padding: 0.25rem;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  color: var(--dark-color);
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .modal-body {
   padding: 1.5rem;
 }
 
+.todo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
 .form-group {
-  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .form-label {
   display: block;
-  margin-bottom: 0.5rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--dark-color);
+  font-size: 0.9rem;
 }
 
 .form-control {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.75rem 1rem;
   border: 1px solid #ced4da;
-  border-radius: 6px;
+  border-radius: var(--border-radius);
   font-size: 1rem;
   background-color: #fff;
+  transition: var(--transition);
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
 }
 
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.form-actions .btn {
+  transition: var(--transition);
+}
+
+.form-actions .btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.session-actions {
+  margin: 1.5rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.session-actions .btn {
+  transition: var(--transition);
+}
+
+.session-actions .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Responsive design */
 @media (max-width: 768px) {
   .review-session {
     padding: 16px;
@@ -667,5 +818,72 @@ export default {
     text-align: center;
     margin-left: 0;
   }
+  
+  .completion-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .stat-item {
+    padding: 1rem;
+  }
+  
+  .stat-item strong {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .completion-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .paused-state {
+    padding: 2rem 1.5rem;
+  }
+  
+  .question-nav {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .question-nav .btn {
+    width: 100%;
+    max-width: 200px;
+  }
+}
+
+/* Animation for session completion */
+.session-completed {
+  animation: fadeIn 0.8s ease forwards;
+}
+
+.session-completed .card {
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+  padding: 2rem;
+  animation: slideIn 0.5s ease forwards;
+}
+
+.session-completed h3 {
+  color: var(--success-color);
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Animation for question loading */
+.question-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.question-loading p {
+  margin-top: 1rem;
+  color: var(--gray-color);
+  font-size: 1.1rem;
 }
 </style>

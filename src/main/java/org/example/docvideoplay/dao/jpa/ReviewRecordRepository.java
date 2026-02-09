@@ -25,11 +25,11 @@ public interface ReviewRecordRepository extends JpaRepository<ReviewRecord, Long
     List<ReviewRecord> findBySessionIdOrderByReviewTimeAsc(Long sessionId);
     
     /**
-     * Find all review records for a specific highlight
-     * @param highlightId the ID of the highlight
-     * @return list of review records for the highlight ordered by review time
+     * Find all review records for a specific card
+     * @param cardId the ID of the card
+     * @return list of review records for the card ordered by review time
      */
-    List<ReviewRecord> findByHighlightIdOrderByReviewTimeDesc(Long highlightId);
+    List<ReviewRecord> findByCardIdOrderByReviewTimeDesc(Long cardId);
     
     /**
      * Find review records by answer quality
@@ -47,20 +47,20 @@ public interface ReviewRecordRepository extends JpaRepository<ReviewRecord, Long
     List<ReviewRecord> findByReviewTimeBetweenOrderByReviewTimeDesc(LocalDateTime startTime, LocalDateTime endTime);
     
     /**
-     * Find the most recent review record for a highlight
-     * @param highlightId the ID of the highlight
-     * @return the most recent review record for the highlight
+     * Find the most recent review record for a card
+     * @param cardId the ID of the card
+     * @return the most recent review record for the card
      */
-    @Query("SELECT rr FROM ReviewRecord rr WHERE rr.highlight.id = :highlightId ORDER BY rr.reviewTime DESC")
-    List<ReviewRecord> findMostRecentByHighlightIdList(@Param("highlightId") Long highlightId);
+    @Query("SELECT rr FROM ReviewRecord rr WHERE rr.cardId = :cardId ORDER BY rr.reviewTime DESC")
+    List<ReviewRecord> findMostRecentByCardIdList(@Param("cardId") Long cardId);
     
     /**
-     * Find the most recent review record for a highlight (convenience method)
-     * @param highlightId the ID of the highlight
-     * @return the most recent review record for the highlight, or null if none exists
+     * Find the most recent review record for a card (convenience method)
+     * @param cardId the ID of the card
+     * @return the most recent review record for the card, or null if none exists
      */
-    default ReviewRecord findMostRecentByHighlightId(Long highlightId) {
-        List<ReviewRecord> records = findMostRecentByHighlightIdList(highlightId);
+    default ReviewRecord findMostRecentByCardId(Long cardId) {
+        List<ReviewRecord> records = findMostRecentByCardIdList(cardId);
         return records.isEmpty() ? null : records.get(0);
     }
     
@@ -72,11 +72,11 @@ public interface ReviewRecordRepository extends JpaRepository<ReviewRecord, Long
     long countByQuality(AnswerQuality quality);
     
     /**
-     * Count review records for a specific highlight
-     * @param highlightId the ID of the highlight
-     * @return count of review records for the highlight
+     * Count review records for a specific card
+     * @param cardId the ID of the card
+     * @return count of review records for the card
      */
-    long countByHighlightId(Long highlightId);
+    long countByCardId(Long cardId);
     
     /**
      * Find correct answers (PERFECT, CORRECT, DIFFICULT) for statistics
@@ -107,13 +107,13 @@ public interface ReviewRecordRepository extends JpaRepository<ReviewRecord, Long
     List<ReviewRecord> findReviewsToday();
     
     /**
-     * Find review records by session and highlight with details
+     * Find review records by session and card with details
      * @param sessionId the session ID
-     * @param highlightId the highlight ID
+     * @param cardId the card ID
      * @return list of review records matching both criteria
      */
-    @Query("SELECT rr FROM ReviewRecord rr WHERE rr.session.id = :sessionId AND rr.highlight.id = :highlightId")
-    List<ReviewRecord> findBySessionIdAndHighlightId(@Param("sessionId") Long sessionId, @Param("highlightId") Long highlightId);
+    @Query("SELECT rr FROM ReviewRecord rr WHERE rr.sessionId = :sessionId AND rr.cardId = :cardId")
+    List<ReviewRecord> findBySessionIdAndCardId(@Param("sessionId") Long sessionId, @Param("cardId") Long cardId);
     
     /**
      * Get quality distribution statistics
@@ -121,4 +121,22 @@ public interface ReviewRecordRepository extends JpaRepository<ReviewRecord, Long
      */
     @Query("SELECT rr.quality, COUNT(rr) FROM ReviewRecord rr GROUP BY rr.quality ORDER BY COUNT(rr) DESC")
     List<Object[]> getQualityDistribution();
+    
+    // User-based queries
+    @Query("SELECT rr FROM ReviewRecord rr JOIN ReviewSession rs ON rr.sessionId = rs.id WHERE rs.userId = :userId ORDER BY rr.reviewTime DESC")
+    List<ReviewRecord> findByUserIdOrderByReviewTimeDesc(@Param("userId") Long userId);
+    @Query("SELECT rr FROM ReviewRecord rr JOIN ReviewSession rs ON rr.sessionId = rs.id WHERE rs.userId = :userId AND rr.cardId = :cardId ORDER BY rr.reviewTime DESC")
+    List<ReviewRecord> findByUserIdAndCardIdOrderByReviewTimeDesc(@Param("userId") Long userId, @Param("cardId") Long cardId);
+    @Query("SELECT rr FROM ReviewRecord rr JOIN ReviewSession rs ON rr.sessionId = rs.id WHERE rs.userId = :userId AND rr.reviewTime BETWEEN :startTime AND :endTime ORDER BY rr.reviewTime DESC")
+    List<ReviewRecord> findByUserIdAndReviewTimeBetweenOrderByReviewTimeDesc(@Param("userId") Long userId, @Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
+    @Query("SELECT rr FROM ReviewRecord rr JOIN ReviewSession rs ON rr.sessionId = rs.id WHERE rs.userId = :userId AND rr.quality IN ('PERFECT', 'CORRECT', 'DIFFICULT') ORDER BY rr.reviewTime DESC")
+    List<ReviewRecord> findCorrectAnswersByUserId(@Param("userId") Long userId);
+    @Query("SELECT rr FROM ReviewRecord rr JOIN ReviewSession rs ON rr.sessionId = rs.id WHERE rs.userId = :userId AND rr.quality IN ('INCORRECT', 'REMEMBERED', 'BLACKOUT') ORDER BY rr.reviewTime DESC")
+    List<ReviewRecord> findIncorrectAnswersByUserId(@Param("userId") Long userId);
+    @Query("SELECT AVG(rr.responseTimeSeconds) FROM ReviewRecord rr JOIN ReviewSession rs ON rr.sessionId = rs.id WHERE rs.userId = :userId AND rr.responseTimeSeconds IS NOT NULL")
+    Double getAverageResponseTimeByUserId(@Param("userId") Long userId);
+    @Query("SELECT rr FROM ReviewRecord rr JOIN ReviewSession rs ON rr.sessionId = rs.id WHERE rs.userId = :userId AND DATE(rr.reviewTime) = CURRENT_DATE ORDER BY rr.reviewTime DESC")
+    List<ReviewRecord> findReviewsTodayByUserId(@Param("userId") Long userId);
+    @Query("SELECT rr.quality, COUNT(rr) FROM ReviewRecord rr JOIN ReviewSession rs ON rr.sessionId = rs.id WHERE rs.userId = :userId GROUP BY rr.quality ORDER BY COUNT(rr) DESC")
+    List<Object[]> getQualityDistributionByUserId(@Param("userId") Long userId);
 }

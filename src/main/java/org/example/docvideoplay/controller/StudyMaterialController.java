@@ -5,12 +5,15 @@ import org.example.docvideoplay.dto.api.StudyMaterialParamsDto;
 import org.example.docvideoplay.dto.api.StudyMaterialResultDto;
 import org.example.docvideoplay.entity.StudyMaterial;
 import org.example.docvideoplay.service.StudyMaterialService;
+import org.example.docvideoplay.service.UserService;
 import org.example.docvideoplay.service.VocabularyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,12 +34,36 @@ public class StudyMaterialController implements StudyMaterialApi {
     private static final Logger logger = LoggerFactory.getLogger(StudyMaterialController.class);
     
     private final StudyMaterialService studyMaterialService;
+    private final UserService userService;
     private final VocabularyService vocabularyService;
     
     @Autowired
-    public StudyMaterialController(StudyMaterialService studyMaterialService, VocabularyService vocabularyService) {
+    public StudyMaterialController(StudyMaterialService studyMaterialService, UserService userService, VocabularyService vocabularyService) {
         this.studyMaterialService = studyMaterialService;
+        this.userService = userService;
         this.vocabularyService = vocabularyService;
+    }
+    
+    /**
+     * Get the current authenticated user ID or default user ID
+     * 
+     * @return The current authenticated user ID or default user ID
+     */
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        // If authenticated, get user by username
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getName())) {
+            String username = authentication.getName();
+            return userService.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found: " + username))
+                    .getId();
+        }
+        
+        // Default to user 'leo' if not authenticated
+        return userService.findByUsername("leo")
+                .orElseThrow(() -> new IllegalArgumentException("Default user not found"))
+                .getId();
     }
     
     @Override
@@ -45,8 +72,9 @@ public class StudyMaterialController implements StudyMaterialApi {
             @Valid StudyMaterialParamsDto params) {
         
         try {
-            logger.info("Uploading material: title={}, type={}, fileName={}", 
-                       params.getTitle(), params.getType(), file.getOriginalFilename());
+            Long currentUserId = getCurrentUserId();
+            logger.info("Uploading material: title={}, type={}, fileName={}, userId={}", 
+                       params.getTitle(), params.getType(), file.getOriginalFilename(), currentUserId);
             
             // Validate file
             if (file.isEmpty()) {
@@ -61,11 +89,11 @@ public class StudyMaterialController implements StudyMaterialApi {
             
             // Upload material
             StudyMaterial material = studyMaterialService.uploadMaterial(
-                file, params.getTitle(), params.getType());
+                file, params.getTitle(), params.getType(), currentUserId);
             
             StudyMaterialResultDto result = convertToResultDto(material);
             
-            logger.info("Material uploaded successfully: id={}", material.getId());
+            logger.info("Material uploaded successfully: id={}, userId={}", material.getId(), currentUserId);
             return ResponseEntity.status(HttpStatus.CREATED).body(result);
             
         } catch (IOException e) {
@@ -83,14 +111,15 @@ public class StudyMaterialController implements StudyMaterialApi {
     @Override
     public ResponseEntity<List<StudyMaterialResultDto>> getAllMaterials() {
         try {
-            logger.debug("Retrieving all study materials");
+            Long currentUserId = getCurrentUserId();
+            logger.debug("Retrieving all study materials for userId: {}", currentUserId);
             
-            List<StudyMaterial> materials = studyMaterialService.getAllMaterials();
+            List<StudyMaterial> materials = studyMaterialService.getMaterialsByUser(currentUserId);
             List<StudyMaterialResultDto> results = materials.stream()
                     .map(this::convertToResultDto)
                     .collect(Collectors.toList());
             
-            logger.debug("Retrieved {} study materials", results.size());
+            logger.debug("Retrieved {} study materials for userId: {}", results.size(), currentUserId);
             return ResponseEntity.ok(results);
             
         } catch (Exception e) {
@@ -102,12 +131,13 @@ public class StudyMaterialController implements StudyMaterialApi {
     @Override
     public ResponseEntity<StudyMaterialResultDto> getMaterial(Long id) {
         try {
-            logger.debug("Retrieving study material: id={}", id);
+            Long currentUserId = getCurrentUserId();
+            logger.debug("Retrieving study material: id={}, userId={}", id, currentUserId);
             
-            StudyMaterial material = studyMaterialService.getMaterialById(id);
+            StudyMaterial material = studyMaterialService.getMaterialById(id, currentUserId);
             StudyMaterialResultDto result = convertToResultDto(material);
             
-            logger.debug("Retrieved study material: id={}, title={}", id, material.getTitle());
+            logger.debug("Retrieved study material: id={}, title={}, userId={}", id, material.getTitle(), currentUserId);
             return ResponseEntity.ok(result);
             
         } catch (IllegalArgumentException e) {
@@ -122,11 +152,12 @@ public class StudyMaterialController implements StudyMaterialApi {
     @Override
     public ResponseEntity<Void> deleteMaterial(Long id) {
         try {
-            logger.info("Deleting study material: id={}", id);
+            Long currentUserId = getCurrentUserId();
+            logger.info("Deleting study material: id={}, userId={}", id, currentUserId);
             
-            studyMaterialService.deleteMaterial(id);
+            studyMaterialService.deleteMaterial(id, currentUserId);
             
-            logger.info("Study material deleted successfully: id={}", id);
+            logger.info("Study material deleted successfully: id={}, userId={}", id, currentUserId);
             return ResponseEntity.noContent().build();
             
         } catch (IllegalArgumentException e) {
@@ -150,9 +181,10 @@ public class StudyMaterialController implements StudyMaterialApi {
     @Override
     public ResponseEntity<org.springframework.core.io.Resource> downloadMaterial(@PathVariable Long id) {
         try {
-            logger.debug("Downloading material: id={}", id);
+            Long currentUserId = getCurrentUserId();
+            logger.debug("Downloading material: id={}, userId={}", id, currentUserId);
             
-            StudyMaterial material = studyMaterialService.getMaterialById(id);
+            StudyMaterial material = studyMaterialService.getMaterialById(id, currentUserId);
             org.springframework.core.io.Resource resource = studyMaterialService.loadFileAsResource(material.getFilePath());
             
             if (resource.exists() && resource.isReadable()) {
@@ -161,7 +193,7 @@ public class StudyMaterialController implements StudyMaterialApi {
                     contentType = "application/octet-stream";
                 }
                 
-                logger.debug("Downloaded material: id={}, filename={}", id, material.getFileName());
+                logger.debug("Downloaded material: id={}, filename={}, userId={}", id, material.getFileName(), currentUserId);
                 return ResponseEntity.ok()
                         .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
                         .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, 
@@ -190,16 +222,17 @@ public class StudyMaterialController implements StudyMaterialApi {
     @Override
     public ResponseEntity<String> getMaterialContent(@PathVariable Long id) {
         try {
-            logger.debug("Getting material content: id={}", id);
+            Long currentUserId = getCurrentUserId();
+            logger.debug("Getting material content: id={}, userId={}", id, currentUserId);
             
-            StudyMaterial material = studyMaterialService.getMaterialById(id);
+            StudyMaterial material = studyMaterialService.getMaterialById(id, currentUserId);
             
             // For now, return the file path or a URL to access the content
             // In a production system, you might want to serve the actual file content
             // or return a signed URL for secure access
             String contentUrl = "/api/materials/" + id + "/download";
             
-            logger.debug("Retrieved material content URL: id={}, url={}", id, contentUrl);
+            logger.debug("Retrieved material content URL: id={}, url={}, userId={}", id, contentUrl, currentUserId);
             return ResponseEntity.ok(contentUrl);
             
         } catch (IllegalArgumentException e) {
@@ -220,11 +253,13 @@ public class StudyMaterialController implements StudyMaterialApi {
     @Override
     public ResponseEntity<String> getMaterialTextContent(@PathVariable Long id) {
         try {
-            logger.debug("Getting material text content: id={}", id);
+            Long currentUserId = getCurrentUserId();
+            logger.debug("Getting material text content: id={}, userId={}", id, currentUserId);
             
-            String textContent = studyMaterialService.readTextContent(id);
+            StudyMaterial material = studyMaterialService.getMaterialById(id, currentUserId);
+            String textContent = studyMaterialService.readTextContent(id, currentUserId);
             
-            logger.debug("Retrieved text content for material {}: {} characters", id, textContent.length());
+            logger.debug("Retrieved text content for material {}: {} characters, userId={}", id, textContent.length(), currentUserId);
             return ResponseEntity.ok(textContent);
             
         } catch (IllegalArgumentException e) {
@@ -256,9 +291,9 @@ public class StudyMaterialController implements StudyMaterialApi {
         dto.setCreatedDate(material.getCreatedDate());
         dto.setUpdatedDate(material.getUpdatedDate());
         
-        // Set highlight count using service method to avoid lazy loading issues
-        long highlightCount = vocabularyService.getHighlightCountByMaterial(material.getId());
-        dto.setHighlightCount((int) highlightCount);
+        // Set card count using service method to avoid lazy loading issues
+        long cardCount = vocabularyService.getCardCountByMaterial(material.getId());
+        dto.setCardCount((int) cardCount);
         
         return dto;
     }

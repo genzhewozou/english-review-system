@@ -21,7 +21,7 @@ public interface NotificationService {
         private String type;
         private LocalDate dueDate;
         private Long relatedTodoId;
-        private Long relatedHighlightId;
+        private Long relatedCardId;
         
         public NotificationDto() {}
         
@@ -48,8 +48,8 @@ public interface NotificationService {
         public Long getRelatedTodoId() { return relatedTodoId; }
         public void setRelatedTodoId(Long relatedTodoId) { this.relatedTodoId = relatedTodoId; }
         
-        public Long getRelatedHighlightId() { return relatedHighlightId; }
-        public void setRelatedHighlightId(Long relatedHighlightId) { this.relatedHighlightId = relatedHighlightId; }
+        public Long getRelatedCardId() { return relatedCardId; }
+        public void setRelatedCardId(Long relatedCardId) { this.relatedCardId = relatedCardId; }
     }
     
     /**

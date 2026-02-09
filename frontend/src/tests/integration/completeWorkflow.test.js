@@ -28,10 +28,12 @@ const mockMaterial = {
   updatedDate: '2024-01-01T10:00:00Z'
 }
 
-const mockHighlight = {
+const mockCard = {
   id: 1,
   materialId: 1,
   text: 'vocabulary word',
+  frontText: 'vocabulary word',
+  backText: 'Need to remember this word',
   context: 'This is a vocabulary word in context.',
   startPosition: 10,
   endPosition: 25,
@@ -57,7 +59,7 @@ const mockReviewSession = {
 }
 
 const mockQuestion = {
-  highlightId: 1,
+  cardId: 1,
   text: 'vocabulary word',
   context: 'This is a vocabulary word in context.',
   userComment: 'Need to remember this word',
@@ -68,12 +70,12 @@ const mockQuestion = {
 const mockTodoItem = {
   id: 1,
   title: 'Review Vocabulary',
-  description: 'Review highlighted vocabulary using spaced repetition',
+  description: 'Review vocabulary cards using spaced repetition',
   dueDate: '2024-01-06',
   completed: false,
   type: 'REVIEW_SESSION',
-  relatedHighlightId: 1,
-  relatedHighlightText: 'vocabulary word',
+  relatedCardId: 1,
+  relatedCardText: 'vocabulary word',
   overdue: false,
   dueToday: true,
   createdDate: '2024-01-01T10:00:00Z',
@@ -138,10 +140,10 @@ describe('Complete User Workflow Integration Tests', () => {
       )
       expect(uploadedMaterial).toEqual(mockMaterial)
 
-      // Step 2: Create highlight
-      mockApiService.post.mockResolvedValueOnce({ data: mockHighlight })
+      // Step 2: Create card from highlight
+      mockApiService.post.mockResolvedValueOnce({ data: mockCard })
       
-      const highlightData = {
+      const cardData = {
         materialId: 1,
         text: 'vocabulary word',
         context: 'This is a vocabulary word in context.',
@@ -150,10 +152,10 @@ describe('Complete User Workflow Integration Tests', () => {
         userComment: 'Need to remember this word'
       }
       
-      const createdHighlight = await vocabularyService.createHighlight(highlightData)
+      const createdCard = await vocabularyService.createCardFromHighlight(cardData)
       
-      expect(mockApiService.post).toHaveBeenCalledWith('/api/vocabulary/highlights', highlightData)
-      expect(createdHighlight).toEqual(mockHighlight)
+      expect(mockApiService.post).toHaveBeenCalledWith('/api/cards/from-highlight', cardData)
+      expect(createdCard).toEqual(mockCard)
 
       // Step 3: Check todo item was created (automatic scheduling)
       mockApiService.get.mockResolvedValueOnce({ data: [mockTodoItem] })
@@ -163,7 +165,7 @@ describe('Complete User Workflow Integration Tests', () => {
       expect(mockApiService.get).toHaveBeenCalledWith('/api/todos', { params: { completed: false } })
       expect(todoItems).toHaveLength(1)
       expect(todoItems[0].type).toBe('REVIEW_SESSION')
-      expect(todoItems[0].relatedHighlightId).toBe(1)
+      expect(todoItems[0].relatedCardId).toBe(1)
 
       // Step 4: Start review session
       mockApiService.post.mockResolvedValueOnce({ data: mockReviewSession })
@@ -185,7 +187,7 @@ describe('Complete User Workflow Integration Tests', () => {
       mockApiService.post.mockResolvedValueOnce({ data: null })
       
       const answerData = {
-        highlightId: 1,
+        cardId: 1,
         quality: 'CORRECT',
         responseTimeSeconds: 5
       }

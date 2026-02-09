@@ -14,14 +14,14 @@ public class StudyMaterialResultDto {
     private Long fileSize;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
-    private Integer highlightCount;
+    private Integer cardCount;
     
     // Constructors
     public StudyMaterialResultDto() {}
     
     public StudyMaterialResultDto(Long id, String title, String fileName, MaterialType type, 
                                  String mimeType, Long fileSize, LocalDateTime createdDate, 
-                                 LocalDateTime updatedDate, Integer highlightCount) {
+                                 LocalDateTime updatedDate, Integer cardCount) {
         this.id = id;
         this.title = title;
         this.fileName = fileName;
@@ -30,7 +30,7 @@ public class StudyMaterialResultDto {
         this.fileSize = fileSize;
         this.createdDate = createdDate;
         this.updatedDate = updatedDate;
-        this.highlightCount = highlightCount;
+        this.cardCount = cardCount;
     }
     
     // Getters and Setters
@@ -98,11 +98,11 @@ public class StudyMaterialResultDto {
         this.updatedDate = updatedDate;
     }
     
-    public Integer getHighlightCount() {
-        return highlightCount;
+    public Integer getCardCount() {
+        return cardCount;
     }
     
-    public void setHighlightCount(Integer highlightCount) {
-        this.highlightCount = highlightCount;
+    public void setCardCount(Integer cardCount) {
+        this.cardCount = cardCount;
     }
 }

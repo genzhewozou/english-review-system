@@ -1,8 +1,8 @@
 package org.example.docvideoplay.api;
 
-import org.example.docvideoplay.dto.api.HighlightParamsDto;
-import org.example.docvideoplay.dto.api.HighlightResultDto;
-import org.example.docvideoplay.dto.api.HighlightUpdateDto;
+import org.example.docvideoplay.dto.api.CardParamsDto;
+import org.example.docvideoplay.dto.api.CardResultDto;
+import org.example.docvideoplay.dto.api.CardUpdateDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,95 +10,95 @@ import javax.validation.Valid;
 import java.util.List;
 
 /**
- * API interface for vocabulary highlighting and management operations
- * Handles highlight creation, updates, and comment management
+ * API interface for vocabulary card operations
+ * Handles card creation, updates, and comment management
  */
 @RequestMapping("/api/vocabulary")
 public interface VocabularyApi {
 
     /**
-     * Create a new highlight
+     * Create a new card
      *
-     * @param params Highlight parameters (materialId, text, context, positions, comment)
-     * @return ResponseEntity containing the created highlight details
+     * @param params Card parameters (materialId, text, context, positions, comment)
+     * @return ResponseEntity containing the created card details
      */
-    @PostMapping("/highlights")
-    ResponseEntity<HighlightResultDto> createHighlight(@Valid @RequestBody HighlightParamsDto params);
+    @PostMapping("/cards")
+    ResponseEntity<CardResultDto> createCard(@Valid @RequestBody CardParamsDto params);
 
     /**
-     * Get all highlights for a specific material
+     * Get all cards for a specific material
      *
      * @param materialId The material ID
-     * @return ResponseEntity containing list of highlights for the material
+     * @return ResponseEntity containing list of cards for the material
      */
-    @GetMapping("/materials/{materialId}/highlights")
-    ResponseEntity<List<HighlightResultDto>> getHighlightsByMaterial(@PathVariable Long materialId);
+    @GetMapping("/materials/{materialId}/cards")
+    ResponseEntity<List<CardResultDto>> getCardsByMaterial(@PathVariable Long materialId);
 
     /**
-     * Get all highlights for a specific material
+     * Get all cards for a specific material
      *
      * @param materialId The material ID
-     * @return ResponseEntity containing list of highlights for the material
+     * @return ResponseEntity containing list of cards for the material
      */
     @GetMapping("/material/{materialId}")
-    ResponseEntity<List<HighlightResultDto>> getHighlightsBySpecificMaterial(@PathVariable Long materialId);
+    ResponseEntity<List<CardResultDto>> getCardsBySpecificMaterial(@PathVariable Long materialId);
 
     /**
-     * Get a specific highlight by ID
+     * Get a specific card by ID
      *
-     * @param id The highlight ID
-     * @return ResponseEntity containing the highlight details
+     * @param id The card ID
+     * @return ResponseEntity containing the card details
      */
-    @GetMapping("/highlights/{id}")
-    ResponseEntity<HighlightResultDto> getHighlight(@PathVariable Long id);
+    @GetMapping("/cards/{id}")
+    ResponseEntity<CardResultDto> getCard(@PathVariable Long id);
 
     /**
-     * Update a highlight (mainly for adding/updating comments)
+     * Update a card (mainly for adding/updating comments)
      *
-     * @param id        The highlight ID
-     * @param updateDto Updated highlight parameters (all fields optional)
-     * @return ResponseEntity containing the updated highlight details
+     * @param id        The card ID
+     * @param updateDto Updated card parameters (all fields optional)
+     * @return ResponseEntity containing the updated card details
      */
-    @PutMapping("/highlights/{id}")
-    ResponseEntity<HighlightResultDto> updateHighlight(
+    @PutMapping("/cards/{id}")
+    ResponseEntity<CardResultDto> updateCard(
             @PathVariable Long id,
-            @Valid @RequestBody HighlightUpdateDto updateDto
+            @Valid @RequestBody CardUpdateDto updateDto
     );
 
     /**
-     * Delete a highlight by ID
+     * Delete a card by ID
      *
-     * @param id The highlight ID to delete
+     * @param id The card ID to delete
      * @return ResponseEntity with no content
      */
-    @DeleteMapping("/highlights/{id}")
-    ResponseEntity<Void> deleteHighlight(@PathVariable Long id);
+    @DeleteMapping("/cards/{id}")
+    ResponseEntity<Void> deleteCard(@PathVariable Long id);
 
     /**
-     * Get highlights that are due for review
+     * Get cards that are due for review
      *
-     * @return ResponseEntity containing list of highlights due for review
+     * @return ResponseEntity containing list of cards due for review
      */
-    @GetMapping("/highlights/due-for-review")
-    ResponseEntity<List<HighlightResultDto>> getHighlightsDueForReview();
+    @GetMapping("/cards/due-for-review")
+    ResponseEntity<List<CardResultDto>> getCardsDueForReview();
 
     /**
-     * Get all highlights across all materials
+     * Get all cards across all materials
      *
-     * @return ResponseEntity containing list of all highlights
+     * @return ResponseEntity containing list of all cards
      */
-    @GetMapping("/highlights")
-    ResponseEntity<List<HighlightResultDto>> getAllHighlights();
+    @GetMapping("/cards")
+    ResponseEntity<List<CardResultDto>> getAllCards();
 
     @GetMapping
-    ResponseEntity<List<HighlightResultDto>> getAllHighlightsReal();
+    ResponseEntity<List<CardResultDto>> getAllCardsReal();
 
     /**
-     * Search highlights by text content
+     * Search cards by text content
      *
      * @param query The search query
-     * @return ResponseEntity containing list of matching highlights
+     * @return ResponseEntity containing list of matching cards
      */
-    @GetMapping("/highlights/search")
-    ResponseEntity<List<HighlightResultDto>> searchHighlights(@RequestParam("q") String query);
+    @GetMapping("/cards/search")
+    ResponseEntity<List<CardResultDto>> searchCards(@RequestParam("q") String query);
 }

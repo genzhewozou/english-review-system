@@ -36,8 +36,15 @@ public class SimpleWorkflowTest {
     @Autowired
     private TodoService todoService;
 
+    @Autowired
+    private UserService userService;
+
     @Test
     void testBasicWorkflow() throws Exception {
+        // Create test user
+        User testUser = userService.findByUsername("testuser")
+                .orElseGet(() -> userService.registerUser("testuser", "test@example.com", "password123"));
+        
         // Step 1: Upload material
         MockMultipartFile file = new MockMultipartFile(
                 "test.pdf", 
@@ -46,40 +53,41 @@ public class SimpleWorkflowTest {
                 "Test content".getBytes()
         );
         
-        StudyMaterial material = materialService.uploadMaterial(file, "Test Material", MaterialType.DOCUMENT);
+        StudyMaterial material = materialService.uploadMaterial(file, "Test Material", MaterialType.DOCUMENT, testUser.getId());
         assertNotNull(material);
         assertEquals("Test Material", material.getTitle());
 
-        // Step 2: Create highlight
-        Highlight highlight = vocabularyService.createHighlight(
+        // Step 2: Create card
+        Card card = vocabularyService.createCardFromHighlight(
+                testUser.getId(),
                 material.getId(),
                 "test word",
                 "This is a test word in context.",
                 0,
                 9
         );
-        assertNotNull(highlight);
-        assertEquals("test word", highlight.getText());
-        assertEquals(material.getId(), highlight.getMaterial().getId());
+        assertNotNull(card);
+        assertEquals("test word", card.getText());
+        assertEquals(material.getId(), card.getMaterialId());
 
         // Step 3: Verify spaced repetition initialization
-        assertEquals(2.5, highlight.getEaseFactor());
-        assertEquals(0, highlight.getRepetitionCount());
-        assertEquals(1, highlight.getIntervalDays());
-        assertNotNull(highlight.getNextReviewDate());
+        assertEquals(2.5, card.getEaseFactor());
+        assertEquals(0, card.getRepetitionCount());
+        assertEquals(1, card.getIntervalDays());
+        assertNotNull(card.getNextReviewDate());
 
-        // Step 4: Start review session with specific highlight
-        ReviewSession session = reviewService.createReviewSessionWithHighlights(Arrays.asList(highlight.getId()));
+        // Step 4: Start review session with specific card
+        ReviewSession session = reviewService.createReviewSessionWithCards(Arrays.asList(card.getId()));
         assertNotNull(session);
         assertTrue(session.getTotalQuestions() > 0);
         assertFalse(session.getCompleted());
 
         // Step 5: Get question and submit answer
-        Highlight question = reviewService.getNextQuestion(session.getId());
+        Card question = reviewService.getNextQuestion(session.getId());
         assertNotNull(question);
-        assertEquals(highlight.getId(), question.getId());
+        assertEquals(card.getId(), question.getId());
 
-        reviewService.submitAnswer(session.getId(), highlight.getId(), AnswerQuality.CORRECT, 5);
+        reviewService.submitAnswer(session.getId(), card.getId(), AnswerQuality.CORRECT, 5);
 
         // Step 6: Complete session
         ReviewSession completedSession = reviewService.completeSession(session.getId());
@@ -87,14 +95,18 @@ public class SimpleWorkflowTest {
         assertEquals(1, completedSession.getCorrectAnswers());
 
         // Step 7: Verify spaced repetition update
-        Highlight updatedHighlight = vocabularyService.getHighlightById(highlight.getId());
-        assertEquals(1, updatedHighlight.getRepetitionCount());
-        assertEquals(1, updatedHighlight.getIntervalDays()); // First correct answer = 1 day interval
-        assertNotNull(updatedHighlight.getLastReviewDate());
+        Card updatedCard = vocabularyService.getCardById(card.getId());
+        assertEquals(1, updatedCard.getRepetitionCount());
+        assertEquals(1, updatedCard.getIntervalDays()); // First correct answer = 1 day interval
+        assertNotNull(updatedCard.getLastReviewDate());
     }
 
     @Test
     void testDataConsistency() throws Exception {
+        // Create test user
+        User testUser = userService.findByUsername("testuser")
+                .orElseGet(() -> userService.registerUser("testuser", "test@example.com", "password123"));
+        
         // Create material
         MockMultipartFile file = new MockMultipartFile(
                 "consistency.pdf", 
@@ -103,19 +115,19 @@ public class SimpleWorkflowTest {
                 "Consistency test content".getBytes()
         );
         
-        StudyMaterial material = materialService.uploadMaterial(file, "Consistency Test", MaterialType.DOCUMENT);
+        StudyMaterial material = materialService.uploadMaterial(file, "Consistency Test", MaterialType.DOCUMENT, testUser.getId());
 
-        // Create multiple highlights
-        Highlight h1 = vocabularyService.createHighlight(material.getId(), "word1", "context1", 0, 5);
-        Highlight h2 = vocabularyService.createHighlight(material.getId(), "word2", "context2", 10, 15);
+        // Create multiple cards
+        Card h1 = vocabularyService.createCardFromHighlight(testUser.getId(), material.getId(), "word1", "context1", 0, 5);
+        Card h2 = vocabularyService.createCardFromHighlight(testUser.getId(), material.getId(), "word2", "context2", 10, 15);
 
-        // Verify material has correct highlight count
+        // Verify material has correct card count
         StudyMaterial updatedMaterial = materialService.getMaterialById(material.getId());
-        long highlightCount = vocabularyService.getHighlightCountByMaterial(material.getId());
-        assertEquals(2, highlightCount);
+        long cardCount = vocabularyService.getCardCountByMaterial(material.getId());
+        assertEquals(2, cardCount);
 
-        // Start review and verify all highlights are included
-        ReviewSession session = reviewService.createReviewSessionWithHighlights(Arrays.asList(h1.getId(), h2.getId()));
+        // Start review and verify all cards are included
+        ReviewSession session = reviewService.createReviewSessionWithCards(Arrays.asList(h1.getId(), h2.getId()));
         assertEquals(2, session.getTotalQuestions());
 
         // Answer both questions
@@ -130,6 +142,10 @@ public class SimpleWorkflowTest {
 
     @Test
     void testErrorHandling() throws Exception {
+        // Create test user
+        User testUser = userService.findByUsername("testuser")
+                .orElseGet(() -> userService.registerUser("testuser", "test@example.com", "password123"));
+        
         // Test starting review with no highlights
         ReviewSession emptySession = reviewService.createReviewSession();
         assertNotNull(emptySession); // Should create empty session when no highlights available
@@ -143,11 +159,11 @@ public class SimpleWorkflowTest {
                 "Error test content".getBytes()
         );
         
-        StudyMaterial material = materialService.uploadMaterial(file, "Error Test", MaterialType.DOCUMENT);
-        Highlight highlight = vocabularyService.createHighlight(material.getId(), "error word", "error context", 0, 10);
+        StudyMaterial material = materialService.uploadMaterial(file, "Error Test", MaterialType.DOCUMENT, testUser.getId());
+        Card card = vocabularyService.createCardFromHighlight(testUser.getId(), material.getId(), "error word", "error context", 0, 10);
 
-        // Start session with specific highlight
-        ReviewSession session = reviewService.createReviewSessionWithHighlights(Arrays.asList(highlight.getId()));
+        // Start session with specific card
+        ReviewSession session = reviewService.createReviewSessionWithCards(Arrays.asList(card.getId()));
         assertNotNull(session);
 
         // Test invalid answer submission

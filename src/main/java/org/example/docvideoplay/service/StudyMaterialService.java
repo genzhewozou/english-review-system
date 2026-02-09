@@ -20,11 +20,12 @@ public interface StudyMaterialService {
      * @param file The multipart file to upload
      * @param title The title for the study material
      * @param type The type of material (DOCUMENT, VIDEO, ARTICLE)
+     * @param userId The ID of the user who owns the material
      * @return The saved StudyMaterial entity
      * @throws IOException if file storage fails
      * @throws IllegalArgumentException if file validation fails
      */
-    StudyMaterial uploadMaterial(MultipartFile file, String title, MaterialType type) throws IOException;
+    StudyMaterial uploadMaterial(MultipartFile file, String title, MaterialType type, Long userId) throws IOException;
     
     /**
      * Retrieve all study materials ordered by creation date (newest first).
@@ -32,6 +33,14 @@ public interface StudyMaterialService {
      * @return List of all study materials
      */
     List<StudyMaterial> getAllMaterials();
+    
+    /**
+     * Retrieve study materials by user ordered by creation date (newest first).
+     * 
+     * @param userId The ID of the user who owns the materials
+     * @return List of study materials for the user
+     */
+    List<StudyMaterial> getMaterialsByUser(Long userId);
     
     /**
      * Retrieve study materials by type ordered by creation date (newest first).
@@ -42,7 +51,26 @@ public interface StudyMaterialService {
     List<StudyMaterial> getMaterialsByType(MaterialType type);
     
     /**
+     * Retrieve study materials by user and type ordered by creation date (newest first).
+     * 
+     * @param userId The ID of the user who owns the materials
+     * @param type The material type to filter by
+     * @return List of materials of the specified type for the user
+     */
+    List<StudyMaterial> getMaterialsByUserAndType(Long userId, MaterialType type);
+    
+    /**
      * Retrieve a specific study material by ID.
+     * 
+     * @param id The ID of the study material
+     * @param userId The ID of the user who owns the material
+     * @return The study material entity
+     * @throws IllegalArgumentException if material not found or not owned by user
+     */
+    StudyMaterial getMaterialById(Long id, Long userId);
+    
+    /**
+     * Retrieve a specific study material by ID (without user check, for internal use).
      * 
      * @param id The ID of the study material
      * @return The study material entity
@@ -59,6 +87,15 @@ public interface StudyMaterialService {
     List<StudyMaterial> searchMaterialsByTitle(String title);
     
     /**
+     * Search study materials by user and title (case insensitive).
+     * 
+     * @param userId The ID of the user who owns the materials
+     * @param title The search term for title
+     * @return List of materials matching the title search for the user
+     */
+    List<StudyMaterial> searchMaterialsByUserAndTitle(Long userId, String title);
+    
+    /**
      * Search study materials by file name (case insensitive).
      * 
      * @param fileName The search term for file name
@@ -67,14 +104,32 @@ public interface StudyMaterialService {
     List<StudyMaterial> searchMaterialsByFileName(String fileName);
     
     /**
-     * Get materials that have highlights.
+     * Get materials that have cards.
      * 
-     * @return List of materials with at least one highlight
+     * @return List of materials with at least one card
      */
-    List<StudyMaterial> getMaterialsWithHighlights();
+    List<StudyMaterial> getMaterialsWithCards();
+    
+    /**
+     * Get materials that have cards by user.
+     * 
+     * @param userId The ID of the user who owns the materials
+     * @return List of materials with at least one card for the user
+     */
+    List<StudyMaterial> getMaterialsWithCardsByUser(Long userId);
     
     /**
      * Delete a study material and its associated file.
+     * 
+     * @param id The ID of the study material to delete
+     * @param userId The ID of the user who owns the material
+     * @throws IllegalArgumentException if material not found or not owned by user
+     * @throws IOException if file deletion fails
+     */
+    void deleteMaterial(Long id, Long userId) throws IOException;
+    
+    /**
+     * Delete a study material and its associated file (without user check, for internal use).
      * 
      * @param id The ID of the study material to delete
      * @throws IllegalArgumentException if material not found
@@ -100,6 +155,15 @@ public interface StudyMaterialService {
     long getCountByType(MaterialType type);
     
     /**
+     * Get the count of materials by user and type.
+     * 
+     * @param userId The ID of the user who owns the materials
+     * @param type The material type
+     * @return Count of materials of the specified type for the user
+     */
+    long getCountByUserAndType(Long userId, MaterialType type);
+    
+    /**
      * Load a file as a Spring Resource for download.
      * 
      * @param filePath The path to the file
@@ -110,6 +174,18 @@ public interface StudyMaterialService {
     
     /**
      * Read the text content of a document material for display and highlighting.
+     * Only works with text-based documents (txt, md, etc.).
+     * 
+     * @param materialId The ID of the study material
+     * @param userId The ID of the user who owns the material
+     * @return The text content of the document
+     * @throws IOException if file cannot be read
+     * @throws IllegalArgumentException if material not found, not owned by user, or not a text document
+     */
+    String readTextContent(Long materialId, Long userId) throws IOException;
+    
+    /**
+     * Read the text content of a document material for display and highlighting (without user check, for internal use).
      * Only works with text-based documents (txt, md, etc.).
      * 
      * @param materialId The ID of the study material

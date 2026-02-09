@@ -13,6 +13,9 @@ public class TodoItem extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+    
     @Column(nullable = false)
     private String title;
     
@@ -29,9 +32,11 @@ public class TodoItem extends BaseEntity {
     @Column(nullable = false)
     private TodoType type;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "related_highlight_id")
-    private Highlight relatedHighlight;
+    @Column(name = "related_card_id")
+    private Long relatedCardId;
+    
+    @Column(name = "related_session_id")
+    private Long relatedSessionId;
     
     // Constructors
     public TodoItem() {}
@@ -43,13 +48,51 @@ public class TodoItem extends BaseEntity {
         this.type = type;
     }
     
-    public TodoItem(String title, String description, LocalDate dueDate, TodoType type, Highlight relatedHighlight) {
+    public TodoItem(String title, String description, LocalDate dueDate, TodoType type, Long relatedCardId) {
         this.title = title;
         this.description = description;
         this.dueDate = dueDate;
         this.type = type;
-        this.relatedHighlight = relatedHighlight;
+        this.relatedCardId = relatedCardId;
     }
+    
+    public TodoItem(Long userId, String title, String description, LocalDate dueDate, TodoType type) {
+        this.userId = userId;
+        this.title = title;
+        this.description = description;
+        this.dueDate = dueDate;
+        this.type = type;
+    }
+    
+    public TodoItem(Long userId, String title, String description, LocalDate dueDate, TodoType type, Long relatedCardId) {
+        this.userId = userId;
+        this.title = title;
+        this.description = description;
+        this.dueDate = dueDate;
+        this.type = type;
+        this.relatedCardId = relatedCardId;
+    }
+    
+    public TodoItem(String title, String description, LocalDate dueDate, TodoType type, Long relatedCardId, Long relatedSessionId) {
+        this.title = title;
+        this.description = description;
+        this.dueDate = dueDate;
+        this.type = type;
+        this.relatedCardId = relatedCardId;
+        this.relatedSessionId = relatedSessionId;
+    }
+    
+    public TodoItem(Long userId, String title, String description, LocalDate dueDate, TodoType type, Long relatedCardId, Long relatedSessionId) {
+        this.userId = userId;
+        this.title = title;
+        this.description = description;
+        this.dueDate = dueDate;
+        this.type = type;
+        this.relatedCardId = relatedCardId;
+        this.relatedSessionId = relatedSessionId;
+    }
+    
+
     
     // Getters and Setters
     public Long getId() {
@@ -100,12 +143,28 @@ public class TodoItem extends BaseEntity {
         this.type = type;
     }
     
-    public Highlight getRelatedHighlight() {
-        return relatedHighlight;
+    public Long getRelatedCardId() {
+        return relatedCardId;
     }
     
-    public void setRelatedHighlight(Highlight relatedHighlight) {
-        this.relatedHighlight = relatedHighlight;
+    public void setRelatedCardId(Long relatedCardId) {
+        this.relatedCardId = relatedCardId;
+    }
+    
+    public Long getRelatedSessionId() {
+        return relatedSessionId;
+    }
+    
+    public void setRelatedSessionId(Long relatedSessionId) {
+        this.relatedSessionId = relatedSessionId;
+    }
+    
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
     
     // Helper methods

@@ -88,7 +88,7 @@ export const schemas = {
       type: { type: 'string', enum: ['DOCUMENT', 'VIDEO', 'ARTICLE'], required: true },
       mimeType: { type: 'string' },
       fileSize: { type: 'number' },
-      highlightCount: { type: 'number' },
+      cardCount: { type: 'number' },
       createdDate: { type: 'string', required: true },
       updatedDate: { type: 'string', required: true }
     }
@@ -104,18 +104,20 @@ export const schemas = {
         fileName: { type: 'string', required: true },
         type: { type: 'string', enum: ['DOCUMENT', 'VIDEO', 'ARTICLE'], required: true },
         fileSize: { type: 'number' },
-        highlightCount: { type: 'number' },
+        cardCount: { type: 'number' },
         createdDate: { type: 'string', required: true }
       }
     }
   },
   
-  highlight: {
+  card: {
     type: 'object',
     properties: {
       id: { type: 'number', required: true },
       materialId: { type: 'number', required: true },
       text: { type: 'string', required: true },
+      frontText: { type: 'string' },
+      backText: { type: 'string' },
       context: { type: 'string' },
       startPosition: { type: 'number' },
       endPosition: { type: 'number' },
@@ -130,7 +132,7 @@ export const schemas = {
     }
   },
   
-  highlightList: {
+  cardList: {
     type: 'array',
     items: {
       type: 'object',
@@ -138,6 +140,8 @@ export const schemas = {
         id: { type: 'number', required: true },
         materialId: { type: 'number', required: true },
         text: { type: 'string', required: true },
+        frontText: { type: 'string' },
+        backText: { type: 'string' },
         context: { type: 'string' },
         userComment: { type: 'string' },
         nextReviewDate: { type: 'string' },
@@ -163,8 +167,10 @@ export const schemas = {
   question: {
     type: 'object',
     properties: {
-      highlightId: { type: 'number', required: true },
+      cardId: { type: 'number', required: true },
       text: { type: 'string', required: true },
+      frontText: { type: 'string' },
+      backText: { type: 'string' },
       context: { type: 'string' },
       userComment: { type: 'string' },
       questionNumber: { type: 'number', required: true },
@@ -181,8 +187,8 @@ export const schemas = {
       dueDate: { type: 'string' },
       completed: { type: 'boolean', required: true },
       type: { type: 'string', enum: ['REVIEW_SESSION', 'CUSTOM_TASK'], required: true },
-      relatedHighlightId: { type: 'number' },
-      relatedHighlightText: { type: 'string' },
+      relatedCardId: { type: 'number' },
+      relatedCardText: { type: 'string' },
       overdue: { type: 'boolean' },
       dueToday: { type: 'boolean' },
       createdDate: { type: 'string', required: true },

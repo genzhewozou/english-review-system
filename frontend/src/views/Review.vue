@@ -1,155 +1,242 @@
 <template>
-  <div class="review">
-    <h2 class="page-title">Review Sessions</h2>
+  <main class="review" aria-labelledby="page-title">
+    <h2 id="page-title" class="page-title">Review Sessions</h2>
     
-    <div class="review-start">
+    <section class="review-start">
       <div class="card text-center">
         <h3 class="card-title">Start a New Review Session</h3>
-        <p class="card-subtitle">Review your highlighted vocabulary using spaced repetition.</p>
+        <p class="card-subtitle">Review your vocabulary cards using spaced repetition.</p>
         
         <div class="review-stats mb-3">
-          <div class="stat-item">
+          <div class="stat-item" aria-label="Due for Review">
             <strong>{{ pendingReviews }}</strong>
             <span>Due for Review</span>
           </div>
-          <div class="stat-item">
-            <strong>{{ totalHighlights }}</strong>
+          <div class="stat-item" aria-label="Total Vocabulary">
+            <strong>{{ totalCards }}</strong>
             <span>Total Vocabulary</span>
+          </div>
+          <div class="stat-item" aria-label="Your Decks">
+            <strong>{{ userDecks.length }}</strong>
+            <span>Your Decks</span>
           </div>
         </div>
         
-        <!-- Step 1: Select materials -->
-        <div class="material-selection mt-3" v-if="materials.length">
-          <h4 class="selection-title">Step 1: Choose study materials</h4>
+        <!-- Session Type Selection -->
+        <div class="session-type-selection mt-3">
+          <h4 class="selection-title">Step 1: Choose session type</h4>
+          <div class="session-type-tabs" role="tablist" aria-label="Session type selection">
+            <button
+              @click="sessionType = 'all'"
+              :class="['session-type-tab', { active: sessionType === 'all' }]"
+              role="tab"
+              :aria-selected="sessionType === 'all'"
+              tabindex="0"
+            >
+              All Vocabulary
+            </button>
+            <button
+              @click="sessionType = 'deck'"
+              :class="['session-type-tab', { active: sessionType === 'deck' }]"
+              role="tab"
+              :aria-selected="sessionType === 'deck'"
+              tabindex="0"
+            >
+              From Deck
+            </button>
+            <button
+              @click="sessionType = 'custom'"
+              :class="['session-type-tab', { active: sessionType === 'custom' }]"
+              role="tab"
+              :aria-selected="sessionType === 'custom'"
+              tabindex="0"
+            >
+              Custom Selection
+            </button>
+          </div>
+        </div>
+        
+        <!-- Deck Selection -->
+        <div class="deck-selection mt-3" v-if="sessionType === 'deck' && userDecks.length">
+          <h4 class="selection-title">Step 2: Choose a deck</h4>
           <p class="selection-help">
-            Select one material to view its vocabulary highlights.
+            Select a deck to review all its cards.
           </p>
-          <div class="material-radio-list">
+          <div class="deck-radio-list">
             <label
-              v-for="material in materials"
-              :key="material.id"
-              class="material-radio-item"
+              v-for="deck in userDecks"
+              :key="deck.id"
+              class="deck-radio-item"
             >
               <input
                 type="radio"
-                name="materialSelection"
-                :value="material.id"
-                v-model="selectedMaterialId"
-                @change="onMaterialsChange"
+                name="deckSelection"
+                :value="deck.id"
+                v-model="selectedDeckId"
+                tabindex="0"
               />
-              <span class="material-radio-label">{{ material.title }}</span>
+              <span class="deck-radio-label">{{ deck.name }}</span>
+              <span class="deck-card-count">({{ deck.cardCount }} cards)</span>
             </label>
           </div>
         </div>
         
-        <!-- Step 2: Show vocabulary of the selected materials -->
-        <div v-if="selectedMaterialId && materialHighlights.length" class="highlight-selection mt-3">
-          <h4 class="selection-title">Step 2: Choose vocabulary for this session</h4>
-          <p class="selection-help">
-            Select the words you want to add to your new review session.
-          </p>
-          <!-- Search input for highlights -->
-          <div class="search-container mb-3">
-            <input
-              type="text"
-              v-model="searchQuery"
-              placeholder="Search highlights..."
-              class="search-input"
-            />
-            <div class="search-options">
-              <label class="similar-search-toggle">
+        <!-- Custom Selection (Original Material-Based) -->
+        <div v-if="sessionType === 'custom'">
+          <!-- Step 2: Select materials -->
+          <div class="material-selection mt-3" v-if="materials.length">
+            <h4 class="selection-title">Step 2: Choose study materials</h4>
+            <p class="selection-help">
+              Select one material to view its vocabulary cards.
+            </p>
+            <div class="material-radio-list">
+              <label
+                v-for="material in materials"
+                :key="material.id"
+                class="material-radio-item"
+              >
                 <input
-                  type="checkbox"
-                  v-model="similarSearchEnabled"
+                  type="radio"
+                  name="materialSelection"
+                  :value="material.id"
+                  v-model="selectedMaterialId"
+                  @change="onMaterialsChange"
+                  tabindex="0"
                 />
-                <span>Include similar words</span>
+                <span class="material-radio-label">{{ material.title }}</span>
               </label>
             </div>
           </div>
-          <div class="selection-list">
-            <label
-              v-for="h in filteredHighlights"
-              :key="h.id"
-              class="selection-item"
-            >
+          
+          <!-- Step 3: Show vocabulary of the selected materials -->
+          <div v-if="selectedMaterialId && materialCards.length" class="card-selection mt-3">
+            <h4 class="selection-title">Step 3: Choose vocabulary for this session</h4>
+            <p class="selection-help">
+              Select the words you want to add to your new review session.
+            </p>
+            <!-- Search input for cards -->
+            <div class="search-container mb-3">
               <input
-                type="checkbox"
-                :value="h.id"
-                v-model="selectedHighlightIds"
+                type="text"
+                v-model="searchQuery"
+                placeholder="Search cards..."
+                class="search-input"
+                aria-label="Search cards"
+                tabindex="0"
               />
-              <span class="selection-text">{{ h.text }}</span>
-            </label>
-          </div>
-        </div>
-        
-        <!-- Step 3: Show selected highlights with source information -->
-        <div v-if="selectedHighlightsList.length" class="selected-highlights-summary mt-3">
-          <h4 class="selection-title">Step 3: Selected highlights ({{ selectedHighlightsList.length }})</h4>
-          <p class="selection-help">
-            Review your selected highlights before starting the session.
-          </p>
-          <div class="selected-highlights-list">
-            <div
-              v-for="highlight in selectedHighlightsList"
-              :key="highlight.id"
-              class="selected-highlight-item"
-            >
-              <div class="highlight-info">
-                <span class="highlight-text">{{ highlight.text }}</span>
-                <span class="highlight-source">From: {{ highlight.materialTitle }}</span>
+              <div class="search-options">
+                <label class="similar-search-toggle">
+                  <input
+                    type="checkbox"
+                    v-model="similarSearchEnabled"
+                    tabindex="0"
+                  />
+                  <span>Include similar words</span>
+                </label>
               </div>
-              <button
-                @click="deleteHighlight(highlight.id)"
-                class="delete-btn"
-                title="Remove from selection"
+            </div>
+            <div class="selection-list">
+              <label
+                v-for="c in filteredCards"
+                :key="c.id"
+                class="selection-item"
               >
-                ×
-              </button>
+                <input
+                  type="checkbox"
+                  :value="c.id"
+                  v-model="selectedCardIds"
+                  tabindex="0"
+                />
+                <span class="selection-text">{{ c.text }}</span>
+              </label>
+            </div>
+          </div>
+          
+          <!-- Step 4: Show selected cards with source information -->
+          <div v-if="selectedCardsList.length" class="selected-cards-summary mt-3">
+            <h4 class="selection-title">Step 4: Selected cards ({{ selectedCardsList.length }})</h4>
+            <p class="selection-help">
+              Review your selected cards before starting the session.
+            </p>
+            <div class="selected-cards-list">
+              <div
+                v-for="card in selectedCardsList"
+                :key="card.id"
+                class="selected-card-item"
+              >
+                <div class="card-info">
+                  <span class="card-text">{{ card.text }}</span>
+                  <span class="card-source">From: {{ card.materialTitle }}</span>
+                </div>
+                <button
+                  @click="deleteCard(card.id)"
+                  class="delete-btn"
+                  title="Remove from selection"
+                  aria-label="Remove card from selection"
+                  tabindex="0"
+                >
+                  ×
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         <button 
           @click="startReviewSession" 
-          :disabled="starting || (selectedMaterialId && selectedHighlightIds.length === 0)"
+          :disabled="starting || (!canStartSession)"
           class="btn mt-3"
+          aria-busy="{{ starting }}"
+          tabindex="0"
         >
-          {{ starting ? 'Starting...' : (selectedHighlightIds.length ? 'Start Selected Review Session' : 'Start Review Session') }}
+          <span v-if="starting" class="loading-spinner small"></span>
+          {{ starting ? 'Starting...' : getStartButtonText() }}
         </button>
         
-        <p v-if="totalHighlights === 0" class="mt-3">
-          No vocabulary highlights found. Please add some highlights first!
+        <p v-if="totalCards === 0" class="mt-3">
+          No vocabulary cards found. Please add some cards first!
         </p>
         
-        <p v-if="materials.length === 0" class="mt-3">
+        <p v-if="materials.length === 0 && sessionType === 'custom'" class="mt-3">
           No study materials found. Please upload some materials first!
         </p>
+        
+        <p v-if="userDecks.length === 0 && sessionType === 'deck'" class="mt-3">
+          No decks found. Please create a deck first!
+        </p>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useApiService } from '../composables/useApiService'
 import { useMaterialService } from '../services/materialService'
 import { useVocabularyService } from '../services/vocabularyService'
+import { useDeckService } from '../services/deckService'
 
 export default {
   name: 'Review',
   setup() {
     const router = useRouter()
+    const route = useRoute()
     const pendingReviews = ref(0)
-    const totalHighlights = ref(0)
+    const totalCards = ref(0)
     const starting = ref(false)
-    const highlights = ref([])
-    const selectedHighlightIds = ref([])
+    const cards = ref([])
+    const selectedCardIds = ref([])
     const materials = ref([])
     const selectedMaterialId = ref('')
-    const materialHighlights = ref([])
+    const materialCards = ref([])
     const searchQuery = ref('')
     const similarSearchEnabled = ref(false)
+    
+    // Deck-related variables
+    const sessionType = ref('all') // 'all', 'deck', 'custom'
+    const selectedDeckId = ref('')
+    const userDecks = ref([])
     
     // Helper function to calculate string similarity (Levenshtein distance)
     const getSimilarity = (str1, str2) => {
@@ -175,26 +262,26 @@ export default {
       return (maxLength - matrix[len1][len2]) / maxLength
     }
     
-    // Computed property for filtered highlights
-    const filteredHighlights = computed(() => {
+    // Computed property for filtered cards
+    const filteredCards = computed(() => {
       if (!searchQuery.value) {
-        return materialHighlights.value
+        return materialCards.value
       }
       
       const query = searchQuery.value.toLowerCase()
       
-      return materialHighlights.value.filter(h => {
-        const highlightText = h.text.toLowerCase()
+      return materialCards.value.filter(c => {
+        const cardText = c.text.toLowerCase()
         
         // Exact match
-        if (highlightText.includes(query)) {
+        if (cardText.includes(query)) {
           return true
         }
         
         // Similar word search if enabled
         if (similarSearchEnabled.value) {
           // Split into words and check similarity for each word
-          const words = highlightText.split(/\s+/)
+          const words = cardText.split(/\s+/)
           return words.some(word => {
             const similarity = getSimilarity(query, word)
             return similarity > 0.6 // 60% similarity threshold
@@ -205,32 +292,61 @@ export default {
       })
     })
     
-    // Computed property for selected highlights with material information
-    const selectedHighlightsList = computed(() => {
-      return selectedHighlightIds.value.map(id => {
-        const highlight = highlights.value.find(h => h.id === id)
-        if (highlight) {
-          const material = materials.value.find(m => m.id === highlight.materialId)
+    // Computed property for selected cards with material information
+    const selectedCardsList = computed(() => {
+      return selectedCardIds.value.map(id => {
+        const card = cards.value.find(c => c.id === id)
+        if (card) {
+          const material = materials.value.find(m => m.id === card.materialId)
           return {
-            ...highlight,
+            ...card,
             materialTitle: material ? material.title : 'Unknown'
           }
         }
         return null
-      }).filter(h => h !== null)
+      }).filter(c => c !== null)
     })
     
-    // Method to delete a highlight from selection
-    const deleteHighlight = (highlightId) => {
-      const index = selectedHighlightIds.value.indexOf(highlightId)
+    // Computed property to determine if session can start
+    const canStartSession = computed(() => {
+      switch (sessionType.value) {
+        case 'all':
+          return totalCards.value > 0
+        case 'deck':
+          return selectedDeckId.value !== ''
+        case 'custom':
+          return selectedMaterialId.value === '' || selectedCardIds.value.length > 0
+        default:
+          return false
+      }
+    })
+    
+    // Method to get start button text
+    const getStartButtonText = () => {
+      switch (sessionType.value) {
+        case 'all':
+          return 'Start Full Review Session'
+        case 'deck':
+          return 'Start Deck Review Session'
+        case 'custom':
+          return selectedCardIds.value.length > 0 ? 'Start Selected Review Session' : 'Start Review Session'
+        default:
+          return 'Start Review Session'
+      }
+    }
+    
+    // Method to delete a card from selection
+    const deleteCard = (cardId) => {
+      const index = selectedCardIds.value.indexOf(cardId)
       if (index > -1) {
-        selectedHighlightIds.value.splice(index, 1)
+        selectedCardIds.value.splice(index, 1)
       }
     }
     
     const { apiService } = useApiService()
     const { getAllMaterials } = useMaterialService()
-    const { getHighlightsByMaterial, getAllHighlights } = useVocabularyService()
+    const { getCardsByMaterial, getAllCards } = useVocabularyService()
+    const { getAllDecks } = useDeckService()
     
     const loadReviewData = async () => {
       try {
@@ -238,33 +354,55 @@ export default {
         const materialsData = await getAllMaterials()
         materials.value = materialsData
         
-        // Load all highlights
-        const allHighlights = await getAllHighlights()
-        highlights.value = allHighlights
-        totalHighlights.value = allHighlights.length
+        // Load all cards
+        const allCards = await getAllCards()
+        cards.value = allCards
+        totalCards.value = allCards.length
 
-        // For now, just set pending reviews to total highlights to enable the button
-        pendingReviews.value = totalHighlights.value
+        // Load user decks
+        const decksData = await getAllDecks()
+        userDecks.value = decksData
+
+        // For now, just set pending reviews to total cards to enable the button
+        pendingReviews.value = totalCards.value
       } catch (error) {
         console.error('Error loading review data:', error)
       }
     }
     
+    // Handle cardId from query parameters
+    const handleCardReview = async () => {
+      const cardId = route.query.cardId
+      if (cardId) {
+        try {
+          // Start review session for this specific card
+          const response = await apiService.post('/reviews/sessions/custom', [cardId])
+          const session = response.data
+          
+          // Navigate to the active review session
+          router.push(`/review/${session.id}`)
+        } catch (error) {
+          console.error('Error starting card review:', error)
+          // If error, just continue with normal review page
+        }
+      }
+    }
+    
     const onMaterialsChange = async () => {
-      materialHighlights.value = []
+      materialCards.value = []
       
       if (selectedMaterialId.value) {
         try {
-          // Load highlights for the selected material
-          const highlightsData = await getHighlightsByMaterial(selectedMaterialId.value)
-          // Add material information to each highlight for grouping
-          const highlightsWithMaterial = highlightsData.map(h => ({
-            ...h,
+          // Load cards for the selected material
+          const cardsData = await getCardsByMaterial(selectedMaterialId.value)
+          // Add material information to each card for grouping
+          const cardsWithMaterial = cardsData.map(c => ({
+            ...c,
             materialId: selectedMaterialId.value
           }))
-          materialHighlights.value = highlightsWithMaterial
+          materialCards.value = cardsWithMaterial
         } catch (error) {
-          console.error('Error loading material highlights:', error)
+          console.error('Error loading material cards:', error)
         }
       }
     }
@@ -273,11 +411,27 @@ export default {
       starting.value = true
       try {
         let response
-        if (selectedHighlightIds.value.length > 0) {
-          response = await apiService.post('/reviews/sessions/custom', selectedHighlightIds.value)
-        } else {
-          response = await apiService.post('/reviews/sessions')
+        
+        switch (sessionType.value) {
+          case 'deck':
+            // Start review session from deck
+            response = await apiService.post(`/reviews/sessions/deck/${selectedDeckId.value}`)
+            break
+          case 'custom':
+            // Start custom review session with selected cards
+            if (selectedCardIds.value.length > 0) {
+              response = await apiService.post('/reviews/sessions/custom', selectedCardIds.value)
+            } else {
+              response = await apiService.post('/reviews/sessions')
+            }
+            break
+          case 'all':
+          default:
+            // Start review session with all cards
+            response = await apiService.post('/reviews/sessions')
+            break
         }
+        
         const session = response.data
 
         // Navigate to the active review session
@@ -290,27 +444,35 @@ export default {
       }
     }
     
-    onMounted(() => {
+    onMounted(async () => {
       console.log('Debug: Component mounted, calling loadReviewData')
-      loadReviewData()
+      await loadReviewData()
+      console.log('Debug: Data loaded, checking for cardId')
+      await handleCardReview()
     })
     
     return {
       pendingReviews,
-      totalHighlights,
+      totalCards,
       starting,
-      highlights,
-      selectedHighlightIds,
+      cards,
+      selectedCardIds,
       materials,
       selectedMaterialId,
-      materialHighlights,
+      materialCards,
       searchQuery,
       similarSearchEnabled,
-      filteredHighlights,
-      selectedHighlightsList,
+      filteredCards,
+      selectedCardsList,
       onMaterialsChange,
       startReviewSession,
-      deleteHighlight,
+      deleteCard,
+      // Deck-related
+      sessionType,
+      selectedDeckId,
+      userDecks,
+      canStartSession,
+      getStartButtonText,
     }
   }
 }
@@ -324,39 +486,45 @@ export default {
 
 .page-title {
   text-align: center;
-  color: #2c3e50;
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin: 2rem 0 1.5rem;
-  background: linear-gradient(90deg, #4361ee, #3a0ca3);
+  color: var(--text-primary);
+  font-size: var(--text-4xl);
+  font-weight: var(--font-bold);
+  margin: var(--space-8) 0 var(--space-6);
+  background: linear-gradient(90deg, var(--primary-600), var(--primary-800));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .card-title {
-  color: #2c3e50;
-  font-size: 1.8rem;
-  font-weight: 700;
-  margin: 0 0 0.75rem;
+  color: var(--text-primary);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  margin: 0 0 var(--space-3);
 }
 
 .card-subtitle {
-  color: #6c757d;
-  font-size: 1.1rem;
-  margin: 0 0 2rem;
-  line-height: 1.5;
+  color: var(--text-secondary);
+  font-size: var(--text-lg);
+  margin: 0 0 var(--space-8);
+  line-height: var(--leading-relaxed);
 }
 
 .card {
-  background: white;
-  border-radius: 16px;
-  padding: 2.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  margin-bottom: 2rem;
-  border: 1px solid #f0f0f0;
+  background-color: var(--surface-primary);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-10);
+  box-shadow: var(--shadow-lg);
+  margin-bottom: var(--space-8);
+  border: 1px solid var(--surface-border);
   position: relative;
   overflow: hidden;
+  transition: var(--transition-normal);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-2px);
 }
 
 .card::before {
@@ -366,7 +534,7 @@ export default {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #4361ee, #3a0ca3, #f72585);
+  background: linear-gradient(90deg, var(--primary-600), var(--primary-800), var(--secondary-600));
 }
 
 .text-center {
@@ -374,50 +542,73 @@ export default {
 }
 
 .btn {
-  display: inline-block;
-  padding: 1rem 2rem;
-  background: linear-gradient(135deg, #4361ee, #3a0ca3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-8);
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
   color: white;
   border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
+  border-radius: var(--radius-xl);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition-normal) var(--transition-ease-in-out);
   text-decoration: none;
   min-width: 240px;
-  box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+  box-shadow: var(--shadow-md);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--tracking-wide);
 }
 
 .btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #3a0ca3, #4361ee);
+  background: linear-gradient(135deg, var(--primary-700), var(--primary-900));
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
+  box-shadow: var(--shadow-lg);
 }
 
 .btn:disabled {
-  background: linear-gradient(135deg, #adb5bd, #6c757d);
+  background: linear-gradient(135deg, var(--text-light), var(--text-secondary));
   cursor: not-allowed;
   opacity: 0.7;
   transform: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn:active {
   transform: translateY(0);
-  box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+  box-shadow: var(--shadow-md);
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: var(--space-2);
+}
+
+.loading-spinner.small {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .review-stats {
   display: flex;
   justify-content: center;
-  gap: 3rem;
-  margin: 2rem 0;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  border-radius: 12px;
+  gap: var(--space-12);
+  margin: var(--space-8) 0;
+  padding: var(--space-6);
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+  border-radius: var(--radius-xl);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -428,11 +619,11 @@ export default {
 
 .stat-item strong {
   display: block;
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #4361ee;
-  margin-bottom: 0.5rem;
-  transition: transform 0.3s ease;
+  font-size: var(--text-4xl);
+  font-weight: var(--font-bold);
+  color: var(--primary-600);
+  margin-bottom: var(--space-2);
+  transition: transform var(--transition-normal);
 }
 
 .stat-item:hover strong {
@@ -440,22 +631,22 @@ export default {
 }
 
 .stat-item span {
-  color: #6c757d;
-  font-size: 1rem;
-  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--tracking-wide);
 }
 
 .mt-3 {
-  margin-top: 1rem;
+  margin-top: var(--space-4);
 }
 
 .mb-3 {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
-.highlight-selection {
+.card-selection {
   text-align: left;
   max-width: 520px;
   margin-left: auto;
@@ -470,60 +661,60 @@ export default {
 }
 
 .selection-title {
-  margin: 0 0 0.75rem 0;
-  color: #2c3e50;
-  font-size: 1.3rem;
-  font-weight: 600;
+  margin: 0 0 var(--space-3) 0;
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
 }
 
 .selection-help {
-  margin: 0 0 1rem 0;
-  color: #6c757d;
-  font-size: 1rem;
-  line-height: 1.4;
+  margin: 0 0 var(--space-4) 0;
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
 }
 
 .selection-list {
   max-height: 250px;
   overflow: auto;
-  border: 2px solid #e9ecef;
-  border-radius: 10px;
-  padding: 1rem;
-  background: #f8f9fa;
-  transition: all 0.3s ease;
+  border: 2px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  background-color: var(--bg-secondary);
+  transition: var(--transition-normal);
 }
 
 .selection-list:hover {
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
 }
 
 .selection-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.25rem;
+  transition: var(--transition-normal);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-1);
 }
 
 .selection-item:hover {
-  background: rgba(67, 97, 238, 0.05);
+  background-color: var(--primary-50);
 }
 
 .selection-item input[type="checkbox"] {
   transform: scale(1.2);
-  accent-color: #4361ee;
+  accent-color: var(--primary-500);
 }
 
 .selection-text {
-  color: #2c3e50;
+  color: var(--text-primary);
   word-break: break-word;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
 }
 
 .material-dropdown {
@@ -533,60 +724,61 @@ export default {
 
 .material-select {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  font-size: 1rem;
-  background-color: #fff;
+  padding: var(--space-3);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  background-color: var(--surface-primary);
   cursor: pointer;
+  transition: var(--transition-normal);
 }
 
 .material-select:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
 }
 
 .material-radio-list {
   max-height: 250px;
   overflow: auto;
-  border: 2px solid #e9ecef;
-  border-radius: 10px;
-  padding: 1rem;
-  background: #f8f9fa;
-  transition: all 0.3s ease;
+  border: 2px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  background-color: var(--bg-secondary);
+  transition: var(--transition-normal);
 }
 
 .material-radio-list:hover {
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
 }
 
 .material-radio-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
   cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.25rem;
+  transition: var(--transition-normal);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-1);
 }
 
 .material-radio-item:hover {
-  background: rgba(67, 97, 238, 0.05);
+  background-color: var(--primary-50);
 }
 
 .material-radio-item input[type="radio"] {
   transform: scale(1.2);
-  accent-color: #4361ee;
+  accent-color: var(--primary-500);
 }
 
 .material-radio-label {
-  color: #2c3e50;
+  color: var(--text-primary);
   word-break: break-word;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
 }
 
 .search-container {
@@ -596,116 +788,116 @@ export default {
 
 .search-input {
   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 2px solid #e9ecef;
-  border-radius: 10px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  background: #f8f9fa;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  transition: var(--transition-normal);
+  background-color: var(--bg-secondary);
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
-  background: white;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
+  background-color: var(--surface-primary);
 }
 
 .search-input::placeholder {
-  color: #6c757d;
+  color: var(--text-secondary);
   font-style: italic;
 }
 
 .search-options {
   display: flex;
   justify-content: flex-end;
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
 }
 
 .similar-search-toggle {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   cursor: pointer;
-  font-size: 0.9rem;
-  color: #2c3e50;
-  transition: all 0.2s ease;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  transition: var(--transition-normal);
 }
 
 .similar-search-toggle:hover {
-  color: #4361ee;
+  color: var(--primary-600);
 }
 
 .similar-search-toggle input[type="checkbox"] {
   transform: scale(1.1);
-  accent-color: #4361ee;
+  accent-color: var(--primary-500);
 }
 
-.selected-highlights-summary {
+.selected-cards-summary {
   text-align: left;
   max-width: 520px;
   margin-left: auto;
   margin-right: auto;
 }
 
-.selected-highlights-list {
+.selected-cards-list {
   max-height: 300px;
   overflow: auto;
-  border: 2px solid #e9ecef;
-  border-radius: 10px;
-  padding: 1rem;
-  background: #f8f9fa;
-  transition: all 0.3s ease;
+  border: 2px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  background-color: var(--bg-secondary);
+  transition: var(--transition-normal);
 }
 
-.selected-highlights-list:hover {
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+.selected-cards-list:hover {
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
 }
 
-.selected-highlight-item {
+.selected-card-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
-  background: white;
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--surface-primary);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-2);
+  transition: var(--transition-normal);
+  box-shadow: var(--shadow-sm);
 }
 
-.selected-highlight-item:hover {
+.selected-card-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
-.selected-highlight-item:last-child {
+.selected-card-item:last-child {
   margin-bottom: 0;
 }
 
-.highlight-info {
+.card-info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-1);
   flex: 1;
   min-width: 0;
 }
 
-.highlight-text {
-  color: #2c3e50;
-  font-weight: 500;
-  font-size: 1rem;
+.card-text {
+  color: var(--text-primary);
+  font-weight: var(--font-medium);
+  font-size: var(--text-base);
   word-break: break-word;
 }
 
-.highlight-source {
-  color: #6c757d;
-  font-size: 0.85rem;
+.card-source {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   font-style: italic;
-  background: #e9ecef;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  background-color: var(--bg-tertiary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   display: inline-block;
   width: fit-content;
 }
@@ -718,28 +910,237 @@ export default {
   height: 28px;
   border: none;
   border-radius: 50%;
-  background: #dc3545;
+  background-color: var(--error-600);
   color: white;
   font-size: 1.2rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-normal);
   flex-shrink: 0;
-  margin-left: 1rem;
+  margin-left: var(--space-4);
 }
 
 .delete-btn:hover {
-  background: #c82333;
+  background-color: var(--error-700);
   transform: scale(1.1);
+}
+
+.session-type-selection {
+  text-align: left;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.session-type-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-1);
+  border: 2px solid var(--surface-border);
+  transition: var(--transition-normal);
+}
+
+.session-type-tabs:hover {
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
+}
+
+.session-type-tab {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  background-color: transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+}
+
+.session-type-tab:hover {
+  background-color: var(--primary-50);
+}
+
+.session-type-tab.active {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.deck-selection {
+  text-align: left;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.deck-radio-list {
+  max-height: 250px;
+  overflow: auto;
+  border: 2px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  background-color: var(--bg-secondary);
+  transition: var(--transition-normal);
+}
+
+.deck-radio-list:hover {
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
+}
+
+.deck-radio-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.deck-radio-item:hover {
+  background-color: var(--primary-50);
+}
+
+.deck-radio-item input[type="radio"] {
+  transform: scale(1.2);
+  accent-color: var(--primary-500);
+}
+
+.deck-radio-label {
+  color: var(--text-primary);
+  word-break: break-word;
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  flex: 1;
+}
+
+.deck-card-count {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  background-color: var(--bg-tertiary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {
   .review-stats {
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--space-4);
   }
   
   .btn {
     width: 100%;
+  }
+  
+  .session-type-tabs {
+    flex-direction: column;
+  }
+  
+  .session-type-tab {
+    width: 100%;
+  }
+  
+  .page-title {
+    font-size: var(--text-3xl);
+  }
+  
+  .card-title {
+    font-size: var(--text-xl);
+  }
+  
+  .card {
+    padding: var(--space-6);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .card {
+    border: 2px solid var(--text-primary);
+  }
+  
+  .session-type-tabs {
+    border: 2px solid var(--text-primary);
+  }
+  
+  .selection-list,
+  .material-radio-list,
+  .deck-radio-list,
+  .selected-cards-list {
+    border: 2px solid var(--text-primary);
+  }
+  
+  .btn {
+    border: 2px solid var(--text-primary);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+  
+  .card:hover {
+    transform: none;
+  }
+  
+  .stat-item strong {
+    transition: none;
+  }
+  
+  .stat-item:hover strong {
+    transform: none;
+  }
+  
+  .selection-item {
+    transition: none;
+  }
+  
+  .material-radio-item {
+    transition: none;
+  }
+  
+  .deck-radio-item {
+    transition: none;
+  }
+  
+  .selected-card-item {
+    transition: none;
+  }
+  
+  .selected-card-item:hover {
+    transform: none;
+  }
+  
+  .delete-btn {
+    transition: none;
+  }
+  
+  .delete-btn:hover {
+    transform: none;
+  }
+  
+  .session-type-tab {
+    transition: none;
+  }
+  
+  .btn {
+    transition: none;
+  }
+  
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
+  
+  .loading-spinner {
+    animation: none;
   }
 }
 </style>

@@ -3,8 +3,6 @@ package org.example.docvideoplay.entity;
 import org.example.docvideoplay.enums.MaterialType;
 
 import javax.persistence.*;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "study_materials")
@@ -33,8 +31,8 @@ public class StudyMaterial extends BaseEntity {
     @Column
     private Long fileSize;
     
-    @OneToMany(mappedBy = "material", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Highlight> highlights = new ArrayList<>();
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
     
     // Constructors
     public StudyMaterial() {}
@@ -44,6 +42,14 @@ public class StudyMaterial extends BaseEntity {
         this.fileName = fileName;
         this.filePath = filePath;
         this.type = type;
+    }
+    
+    public StudyMaterial(String title, String fileName, String filePath, MaterialType type, Long userId) {
+        this.title = title;
+        this.fileName = fileName;
+        this.filePath = filePath;
+        this.type = type;
+        this.userId = userId;
     }
     
     // Getters and Setters
@@ -103,22 +109,11 @@ public class StudyMaterial extends BaseEntity {
         this.fileSize = fileSize;
     }
     
-    public List<Highlight> getHighlights() {
-        return highlights;
+    public Long getUserId() {
+        return userId;
     }
     
-    public void setHighlights(List<Highlight> highlights) {
-        this.highlights = highlights;
-    }
-    
-    // Helper methods
-    public void addHighlight(Highlight highlight) {
-        highlights.add(highlight);
-        highlight.setMaterial(this);
-    }
-    
-    public void removeHighlight(Highlight highlight) {
-        highlights.remove(highlight);
-        highlight.setMaterial(null);
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }

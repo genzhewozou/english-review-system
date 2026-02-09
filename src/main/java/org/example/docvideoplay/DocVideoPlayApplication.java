@@ -1,5 +1,6 @@
 package org.example.docvideoplay;
 
+import org.example.docvideoplay.config.ForeignKeyRemovalMigration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -9,7 +10,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 public class DocVideoPlayApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(DocVideoPlayApplication.class, args);
+		SpringApplication application = new SpringApplication(DocVideoPlayApplication.class);
+		application.addInitializers(new ForeignKeyRemovalMigration());
+		application.run(args);
 	}
 
 }

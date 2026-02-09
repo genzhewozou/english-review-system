@@ -58,18 +58,23 @@ public interface StudyMaterialRepository extends JpaRepository<StudyMaterial, Lo
      */
     long countByType(MaterialType type);
     
-    /**
-     * Find materials with highlights count using custom query
-     * @return list of materials with their highlight counts
-     */
-    @Query("SELECT sm FROM StudyMaterial sm LEFT JOIN FETCH sm.highlights WHERE SIZE(sm.highlights) > 0 ORDER BY sm.createdDate DESC")
-    List<StudyMaterial> findMaterialsWithHighlights();
+    // User-based queries
+    List<StudyMaterial> findByUserId(Long userId);
+    List<StudyMaterial> findByUserIdOrderByCreatedDateDesc(Long userId);
+    List<StudyMaterial> findByUserIdAndTitleContainingIgnoreCase(Long userId, String title);
     
     /**
-     * Find materials by type with highlights eagerly loaded
-     * @param type the material type
-     * @return list of materials with highlights loaded
+     * Find materials with cards by user ID
+     * @param userId the user ID
+     * @return list of materials with cards for the user
      */
-    @Query("SELECT DISTINCT sm FROM StudyMaterial sm LEFT JOIN FETCH sm.highlights WHERE sm.type = :type ORDER BY sm.createdDate DESC")
-    List<StudyMaterial> findByTypeWithHighlights(@Param("type") MaterialType type);
+    @Query("SELECT DISTINCT m FROM StudyMaterial m JOIN Card c ON m.id = c.materialId WHERE m.userId = :userId")
+    List<StudyMaterial> findMaterialsWithCardsByUserId(@Param("userId") Long userId);
+    
+    /**
+     * Find materials with cards
+     * @return list of materials with cards
+     */
+    @Query("SELECT DISTINCT m FROM StudyMaterial m JOIN Card c ON m.id = c.materialId")
+    List<StudyMaterial> findMaterialsWithCards();
 }

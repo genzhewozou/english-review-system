@@ -18,18 +18,37 @@ public class TodoItemParamsDto {
     @NotNull(message = "Todo type is required")
     private TodoType type;
     
-    private Long relatedHighlightId;
+    private Long relatedCardId;
+    private Long relatedSessionId;
     
     // Constructors
     public TodoItemParamsDto() {}
     
     public TodoItemParamsDto(String title, String description, LocalDate dueDate, 
-                            TodoType type, Long relatedHighlightId) {
+                            TodoType type) {
         this.title = title;
         this.description = description;
         this.dueDate = dueDate;
         this.type = type;
-        this.relatedHighlightId = relatedHighlightId;
+    }
+    
+    public TodoItemParamsDto(String title, String description, LocalDate dueDate, 
+                            TodoType type, Long relatedSessionId) {
+        this.title = title;
+        this.description = description;
+        this.dueDate = dueDate;
+        this.type = type;
+        this.relatedSessionId = relatedSessionId;
+    }
+    
+    public TodoItemParamsDto(String title, String description, LocalDate dueDate, 
+                            TodoType type, Long relatedCardId, Long relatedSessionId) {
+        this.title = title;
+        this.description = description;
+        this.dueDate = dueDate;
+        this.type = type;
+        this.relatedCardId = relatedCardId;
+        this.relatedSessionId = relatedSessionId;
     }
     
     // Getters and Setters
@@ -65,11 +84,19 @@ public class TodoItemParamsDto {
         this.type = type;
     }
     
-    public Long getRelatedHighlightId() {
-        return relatedHighlightId;
+    public Long getRelatedSessionId() {
+        return relatedSessionId;
     }
     
-    public void setRelatedHighlightId(Long relatedHighlightId) {
-        this.relatedHighlightId = relatedHighlightId;
+    public void setRelatedSessionId(Long relatedSessionId) {
+        this.relatedSessionId = relatedSessionId;
+    }
+    
+    public Long getRelatedCardId() {
+        return relatedCardId;
+    }
+    
+    public void setRelatedCardId(Long relatedCardId) {
+        this.relatedCardId = relatedCardId;
     }
 }

@@ -1,78 +1,177 @@
 <template>
-  <div class="vocabulary">
-    <h2>Vocabulary Management</h2>
+  <main class="vocabulary" aria-labelledby="vocabulary-heading">
+    <!-- Header Section -->
+    <header class="vocabulary-header fade-in">
+      <h1 id="vocabulary-heading" class="vocabulary-title">Vocabulary Management</h1>
+      <p class="vocabulary-subtitle">Manage and organize your vocabulary cards effectively</p>
+    </header>
     
-    <div class="filters mb-3">
-      <div class="d-flex gap-1">
-        <select v-model="selectedMaterial" @change="loadHighlights" class="form-control">
-          <option value="">All Materials</option>
-          <option v-for="material in materials" :key="material.id" :value="material.id">
-            {{ material.title }}
-          </option>
-        </select>
-        <input 
-          v-model="searchTerm" 
-          @input="filterHighlights"
-          type="text" 
-          placeholder="Search vocabulary..." 
-          class="form-control"
-        >
+    <!-- Actions Section -->
+    <section class="actions-section fade-in" style="animation-delay: 0.1s;">
+      <div class="action-buttons">
+        <button @click="showAddCardModal = true" class="btn btn-primary" aria-label="Add new vocabulary card" tabindex="0">
+          <span class="btn-icon">+</span>
+          <span class="btn-text">Add Card</span>
+        </button>
+        <button @click="showAddTagModal = true" class="btn btn-secondary" aria-label="Add new tag" tabindex="0">
+          <span class="btn-icon">🏷️</span>
+          <span class="btn-text">Add Tag</span>
+        </button>
+        <div class="action-dropdown" @click="toggleDropdown" @click.outside="closeDropdown">
+          <button class="btn btn-outline" aria-haspopup="true" :aria-expanded="isDropdownOpen" aria-label="More options" tabindex="0">
+            <span class="btn-icon">⚙️</span>
+            <span class="btn-text">More</span>
+            <span class="btn-arrow" :class="{ 'rotated': isDropdownOpen }">▼</span>
+          </button>
+          <div class="dropdown-menu" v-if="isDropdownOpen" role="menu" aria-label="More options menu">
+            <button @click="openTagManagement" class="dropdown-item" role="menuitem" aria-label="Manage tags" tabindex="0">
+              <span class="item-icon">📋</span>
+              <span class="item-text">Manage Tags</span>
+            </button>
+            <button @click="openTagGuide" class="dropdown-item" role="menuitem" aria-label="How to use tags guide" tabindex="0">
+              <span class="item-icon">❓</span>
+              <span class="item-text">How to Use Tags</span>
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
     
-    <div v-if="loading" class="text-center">
-      <div class="spinner"></div>
-    </div>
+    <!-- Filters Section -->
+    <section class="filters-card card fade-in" style="animation-delay: 0.2s;">
+      <div class="filter-header">
+        <h2 class="filter-title">Filters</h2>
+        <button @click="clearFilters" class="btn btn-sm btn-outline" aria-label="Clear all filters" tabindex="0">
+          <span class="btn-icon">🗑️</span>
+          <span class="btn-text">Clear All</span>
+        </button>
+      </div>
+      <div class="filter-controls">
+        <div class="filter-group" role="group" aria-labelledby="material-label">
+          <label id="material-label" class="filter-label">Material</label>
+          <select v-model="selectedMaterial" @change="loadCards" class="form-control" tabindex="0">
+            <option value="">All Materials</option>
+            <option v-for="material in materials" :key="material.id" :value="material.id">
+              {{ material.title }}
+            </option>
+          </select>
+        </div>
+        <div class="filter-group" role="group" aria-labelledby="tag-label">
+          <label id="tag-label" class="filter-label">Tag</label>
+          <select v-model="selectedTag" @change="filterCards" class="form-control" tabindex="0">
+            <option value="">All Tags</option>
+            <option v-for="tag in tags" :key="tag.id" :value="tag.id">
+              {{ tag.name }}
+            </option>
+          </select>
+        </div>
+        <div class="filter-group search-group" role="group" aria-labelledby="search-label">
+          <label id="search-label" class="filter-label">Search</label>
+          <div class="search-input-group">
+            <input 
+              v-model="searchTerm" 
+              @input="filterCards"
+              type="text" 
+              placeholder="Search words, phrases, or notes..." 
+              class="form-control"
+              aria-label="Search vocabulary cards"
+              tabindex="0"
+            >
+            <button v-if="searchTerm" @click="searchTerm = ''; filterCards()" class="search-clear-btn" aria-label="Clear search" tabindex="0">
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
     
-    <div v-else-if="filteredHighlights.length === 0" class="card text-center">
-      <p>No vocabulary found. Start highlighting words in your study materials!</p>
-    </div>
+    <!-- Cards Header -->
+    <section class="cards-header fade-in" style="animation-delay: 0.3s;">
+      <h2 class="cards-title">Cards</h2>
+      <span class="cards-count badge badge-primary">{{ filteredCards.length }} cards</span>
+    </section>
     
-    <div v-else class="highlights-list">
-      <div v-for="highlight in filteredHighlights" :key="highlight.id" class="card highlight-card">
-        <div class="highlight-header">
-          <h4 class="highlight-text">{{ highlight.text }}</h4>
-          <div class="highlight-actions">
-            <button @click="editHighlight(highlight)" class="btn btn-secondary">Edit</button>
-            <button @click="deleteHighlight(highlight.id)" class="btn btn-danger">Delete</button>
+    <!-- Loading State -->
+    <section v-if="loading" class="loading-state fade-in" style="animation-delay: 0.4s;">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading cards...</p>
+    </section>
+    
+    <!-- Empty State -->
+    <section v-else-if="filteredCards.length === 0" class="empty-state fade-in" style="animation-delay: 0.4s;">
+      <div class="empty-state-icon">📝</div>
+      <h3 class="empty-state-title">No vocabulary cards found</h3>
+      <p class="empty-state-description">Start saving words and phrases from your study materials!</p>
+      <button @click="showAddCardModal = true" class="btn btn-primary" aria-label="Add first vocabulary card" tabindex="0">
+        <span class="btn-icon">+</span>
+        <span class="btn-text">Add First Card</span>
+      </button>
+    </section>
+    
+    <!-- Cards List -->
+    <section v-else class="cards-list fade-in" style="animation-delay: 0.4s;">
+      <article v-for="(card, index) in filteredCards" :key="card.id" class="card card-item" :style="{ animationDelay: `${0.4 + index * 0.05}s` }" tabindex="0">
+        <div class="card-header">
+          <div class="card-text-container">
+            <h3 class="card-text">{{ card.text }}</h3>
+            <div class="card-tags" v-if="card.tags && card.tags.length > 0">
+              <span v-for="tagId in card.tags" :key="tagId" class="badge badge-secondary">
+                {{ getTagName(tagId) }}
+              </span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button @click="editCard(card)" class="btn btn-sm btn-outline" aria-label="Edit card" tabindex="0">
+              <span class="btn-icon">✏️</span>
+              <span class="btn-text">Edit</span>
+            </button>
+            <button @click="deleteCard(card.id)" class="btn btn-sm btn-error" aria-label="Delete card" tabindex="0">
+              <span class="btn-icon">🗑️</span>
+              <span class="btn-text">Delete</span>
+            </button>
           </div>
         </div>
         
-        <div class="highlight-details">
-          <div class="highlight-context" v-if="highlight.context">
-            <strong>Context:</strong>
-            <p>{{ highlight.context }}</p>
+        <div class="card-details">
+          <div class="card-context" v-if="card.context">
+            <div class="detail-label">Context</div>
+            <p class="detail-content">{{ card.context }}</p>
           </div>
           
-          <div class="highlight-comment" v-if="highlight.userComment">
-            <strong>Your Notes:</strong>
-            <p>{{ highlight.userComment }}</p>
+          <div class="card-comment" v-if="card.userComment">
+            <div class="detail-label">Your Notes</div>
+            <p class="detail-content">{{ card.userComment }}</p>
           </div>
           
-          <div class="highlight-meta">
-            <span class="meta-item">
-              <strong>Material:</strong> {{ getMaterialTitle(highlight.materialId) }}
-            </span>
-            <span class="meta-item">
-              <strong>Added:</strong> {{ formatDate(highlight.createdDate) }}
-            </span>
-            <span class="meta-item" v-if="highlight.nextReviewDate">
-              <strong>Next Review:</strong> {{ formatDate(highlight.nextReviewDate) }}
-            </span>
+          <div class="card-meta">
+            <div class="meta-grid">
+              <div class="meta-item">
+                <div class="meta-label">Material</div>
+                <div class="meta-value">{{ getMaterialTitle(card.materialId) }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Added</div>
+                <div class="meta-value">{{ formatDate(card.createdDate) }}</div>
+              </div>
+              <div class="meta-item" v-if="card.nextReviewDate">
+                <div class="meta-label">Next Review</div>
+                <div class="meta-value">{{ formatDate(card.nextReviewDate) }}</div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </article>
+    </section>
     
     <!-- Edit Modal -->
     <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
       <div class="modal" @click.stop>
         <div class="modal-header">
-          <h3>Edit Highlight</h3>
-          <button @click="closeEditModal" class="close-btn">&times;</button>
+          <h3>Edit Card</h3>
+          <button @click="closeEditModal" class="close-btn" aria-label="Close modal">&times;</button>
         </div>
         <div class="modal-body">
-          <form @submit.prevent="updateHighlight">
+          <form @submit.prevent="updateCard">
             <div class="form-group">
               <label class="form-label">Word/Phrase</label>
               <input v-model="editForm.text" type="text" class="form-control" readonly>
@@ -86,8 +185,12 @@
                 placeholder="Add your notes about this word/phrase..."
               ></textarea>
             </div>
-            <div class="form-group">
-              <button type="submit" class="btn" :disabled="updating">
+            <div class="form-actions">
+              <button type="button" @click="closeEditModal" class="btn btn-outline">
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-primary" :disabled="updating">
+                <span v-if="updating" class="loading-spinner small"></span>
                 {{ updating ? 'Updating...' : 'Update' }}
               </button>
             </div>
@@ -95,22 +198,192 @@
         </div>
       </div>
     </div>
-  </div>
+    
+    <!-- Add Tag Modal -->
+    <div v-if="showAddTagModal" class="modal-overlay" @click="closeAddTagModal">
+      <div class="modal" @click.stop>
+        <div class="modal-header">
+          <h3>Add New Tag</h3>
+          <button @click="closeAddTagModal" class="close-btn" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="addTag">
+            <div class="form-group">
+              <label class="form-label">Tag Name</label>
+              <input v-model="tagForm.name" type="text" class="form-control" required placeholder="Enter tag name">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description (Optional)</label>
+              <textarea v-model="tagForm.description" class="form-control" rows="3" placeholder="Enter tag description"></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" @click="closeAddTagModal" class="btn btn-outline">
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-primary" :disabled="saving">
+                <span v-if="saving" class="loading-spinner small"></span>
+                {{ saving ? 'Saving...' : 'Add Tag' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add Card Modal -->
+    <div v-if="showAddCardModal" class="modal-overlay" @click="closeAddCardModal">
+      <div class="modal" @click.stop>
+        <div class="modal-header">
+          <h3>Add New Card</h3>
+          <button @click="closeAddCardModal" class="close-btn" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="addCard">
+            <div class="form-group">
+              <label class="form-label">Word/Phrase</label>
+              <input v-model="cardForm.text" type="text" class="form-control" required placeholder="Enter word or phrase">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Context (Optional)</label>
+              <textarea v-model="cardForm.context" class="form-control" rows="3" placeholder="Enter context"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Your Notes</label>
+              <textarea v-model="cardForm.userComment" class="form-control" rows="4" placeholder="Add your notes..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Select Material</label>
+              <select v-model="cardForm.materialId" class="form-control" required>
+                <option value="">Select a material</option>
+                <option v-for="material in materials" :key="material.id" :value="material.id">
+                  {{ material.title }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Select Tags (Optional)</label>
+              <div class="tag-selection">
+                <div v-for="tag in tags" :key="tag.id" class="tag-checkbox">
+                  <input 
+                    type="checkbox" 
+                    :id="`tag-${tag.id}`" 
+                    :value="tag.id" 
+                    v-model="cardForm.tags"
+                  >
+                  <label :for="`tag-${tag.id}`">{{ tag.name }}</label>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" @click="closeAddCardModal" class="btn btn-outline">
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-primary" :disabled="saving">
+                <span v-if="saving" class="loading-spinner small"></span>
+                {{ saving ? 'Saving...' : 'Add Card' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tag Management Modal -->
+    <div v-if="showTagManagementModal" class="modal-overlay" @click="closeTagManagementModal">
+      <div class="modal" @click.stop>
+        <div class="modal-header">
+          <h3>Manage Tags</h3>
+          <button @click="closeTagManagementModal" class="close-btn" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="tag-management">
+            <h4>All Tags</h4>
+            <div class="tag-list">
+              <div v-for="tag in tags" :key="tag.id" class="tag-item card">
+                <div class="tag-info">
+                  <h5>{{ tag.name }}</h5>
+                  <p v-if="tag.description">{{ tag.description }}</p>
+                </div>
+                <div class="tag-actions">
+                  <button @click="toggleTagSelection(tag.id)" class="btn btn-sm btn-outline">
+                    {{ selectedTags.includes(tag.id) ? '✓ Selected' : 'Select' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="tag-actions-footer">
+              <button @click="closeTagManagementModal" class="btn btn-outline">Cancel</button>
+              <button @click="associateTagsWithCard(editForm.id)" class="btn btn-primary" v-if="editForm.id">
+                Associate Tags
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tag Usage Guide Modal -->
+    <div v-if="showTagGuideModal" class="modal-overlay" @click="closeTagGuideModal">
+      <div class="modal" @click.stop>
+        <div class="modal-header">
+          <h3>How to Use Tags</h3>
+          <button @click="closeTagGuideModal" class="close-btn" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="tag-guide">
+            <div class="guide-section card">
+              <h4>Creating Tags</h4>
+              <p>Click the "Add Tag" button to create new tags. You can add a name and optional description for each tag.</p>
+            </div>
+            <div class="guide-section card">
+              <h4>Associating Tags with Cards</h4>
+              <p>When adding a new card, select the tags you want to associate with it from the checkbox list.</p>
+            </div>
+            <div class="guide-section card">
+              <h4>Filtering by Tags</h4>
+              <p>Use the "All Tags" dropdown in the filters section to filter vocabulary cards by specific tags.</p>
+            </div>
+            <div class="guide-section card">
+              <h4>Managing Tags</h4>
+              <p>Click the "Manage Tags" button to view all created tags and their descriptions.</p>
+            </div>
+            <div class="guide-section card">
+              <h4>Best Practices</h4>
+              <ul>
+                <li>Use descriptive tag names (e.g., "Business English", "Academic", "Everyday")</li>
+                <li>Create consistent tag categories</li>
+                <li>Don't overuse tags - keep it simple and meaningful</li>
+                <li>Use tags to group related vocabulary for focused review</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
 </template>
 
 <script>
 import { ref, onMounted, computed } from 'vue'
 import { useApiService } from '../composables/useApiService'
+import { useNotification } from '../composables/useNotification'
+import { confirmCardDelete } from '../utils/confirmDialog'
 
 export default {
   name: 'Vocabulary',
   setup() {
-    const highlights = ref([])
+    const cards = ref([])
     const materials = ref([])
     const loading = ref(false)
     const updating = ref(false)
+    const saving = ref(false)
     const showEditModal = ref(false)
+    const showAddTagModal = ref(false)
+    const showAddCardModal = ref(false)
+    const showTagGuideModal = ref(false)
+    const isDropdownOpen = ref(false)
     const selectedMaterial = ref('')
+    const selectedTag = ref('')
     const searchTerm = ref('')
     
     const editForm = ref({
@@ -119,21 +392,43 @@ export default {
       userComment: ''
     })
     
-    const { apiService } = useApiService()
+    const tagForm = ref({
+      name: '',
+      description: ''
+    })
     
-    const filteredHighlights = computed(() => {
-      let filtered = highlights.value
+    const cardForm = ref({
+      text: '',
+      context: '',
+      userComment: '',
+      materialId: '',
+      tags: []
+    })
+    
+    const tags = ref([])
+    const selectedTags = ref([])
+    const showTagManagementModal = ref(false)
+    
+    const { apiService } = useApiService()
+    const { showSuccess, showError } = useNotification()
+    
+    const filteredCards = computed(() => {
+      let filtered = cards.value
       
       if (selectedMaterial.value) {
-        filtered = filtered.filter(h => h.materialId === parseInt(selectedMaterial.value))
+        filtered = filtered.filter(c => c.materialId === parseInt(selectedMaterial.value))
+      }
+      
+      if (selectedTag.value) {
+        filtered = filtered.filter(c => c.tags && c.tags.includes(parseInt(selectedTag.value)))
       }
       
       if (searchTerm.value) {
         const term = searchTerm.value.toLowerCase()
-        filtered = filtered.filter(h => 
-          h.text.toLowerCase().includes(term) ||
-          (h.userComment && h.userComment.toLowerCase().includes(term)) ||
-          (h.context && h.context.toLowerCase().includes(term))
+        filtered = filtered.filter(c => 
+          c.text.toLowerCase().includes(term) ||
+          (c.userComment && c.userComment.toLowerCase().includes(term)) ||
+          (c.context && c.context.toLowerCase().includes(term))
         )
       }
       
@@ -149,32 +444,32 @@ export default {
       }
     }
     
-    const loadHighlights = async () => {
+    const loadCards = async () => {
       loading.value = true
       try {
         const url = selectedMaterial.value 
           ? `/vocabulary/material/${selectedMaterial.value}`
           : '/vocabulary'
         const response = await apiService.get(url)
-        highlights.value = response.data || []
+        cards.value = response.data || []
       } catch (error) {
-        console.error('Error loading highlights:', error)
-        highlights.value = []
+        console.error('Error loading cards:', error)
+        cards.value = []
       } finally {
         loading.value = false
       }
     }
     
-    const editHighlight = (highlight) => {
+    const editCard = (card) => {
       editForm.value = {
-        id: highlight.id,
-        text: highlight.text,
-        userComment: highlight.userComment || ''
+        id: card.id,
+        text: card.text,
+        userComment: card.userComment || ''
       }
       showEditModal.value = true
     }
     
-    const updateHighlight = async () => {
+    const updateCard = async () => {
       updating.value = true
       try {
         await apiService.put(`/vocabulary/${editForm.value.id}`, {
@@ -182,29 +477,32 @@ export default {
         })
         
         // Update local data
-        const index = highlights.value.findIndex(h => h.id === editForm.value.id)
+        const index = cards.value.findIndex(c => c.id === editForm.value.id)
         if (index !== -1) {
-          highlights.value[index].userComment = editForm.value.userComment
+          cards.value[index].userComment = editForm.value.userComment
         }
         
         closeEditModal()
       } catch (error) {
-        console.error('Error updating highlight:', error)
-        alert('Error updating highlight. Please try again.')
+        console.error('Error updating card:', error)
+        showError('Error updating card. Please try again.')
       } finally {
         updating.value = false
       }
     }
     
-    const deleteHighlight = async (id) => {
-      if (!confirm('Are you sure you want to delete this highlight?')) return
+    const deleteCard = async (id) => {
+      const card = cards.value.find(c => c.id === id)
+      if (!card) return
+      
+      if (!await confirmCardDelete(card)) return
       
       try {
-        await apiService.delete(`/vocabulary/${id}`)
-        highlights.value = highlights.value.filter(h => h.id !== id)
+        await apiService.delete(`/vocabulary/cards/${id}`)
+        cards.value = cards.value.filter(c => c.id !== id)
       } catch (error) {
-        console.error('Error deleting highlight:', error)
-        alert('Error deleting highlight. Please try again.')
+        console.error('Error deleting card:', error)
+        showError('Error deleting card. Please try again.')
       }
     }
     
@@ -218,172 +516,984 @@ export default {
       return material ? material.title : 'Unknown Material'
     }
     
+    const getTagName = (tagId) => {
+      const tag = tags.value.find(t => t.id === tagId)
+      return tag ? tag.name : 'Unknown Tag'
+    }
+    
     const formatDate = (dateString) => {
       return new Date(dateString).toLocaleDateString()
     }
     
-    const filterHighlights = () => {
+    const filterCards = () => {
       // Reactive computed property handles this automatically
+    }
+    
+    const clearFilters = () => {
+      selectedMaterial.value = ''
+      selectedTag.value = ''
+      searchTerm.value = ''
+      loadCards()
+    }
+    
+    const addTag = async () => {
+      saving.value = true
+      try {
+        await apiService.post('/tags', tagForm.value)
+        showSuccess('Tag added successfully!')
+        closeAddTagModal()
+      } catch (error) {
+        console.error('Error adding tag:', error)
+        showError('Error adding tag. Please try again.')
+      } finally {
+        saving.value = false
+      }
+    }
+    
+    const addCard = async () => {
+      saving.value = true
+      try {
+        // Convert materialId to a number
+        const cardData = {
+          ...cardForm.value,
+          materialId: parseInt(cardForm.value.materialId)
+        }
+        await apiService.post('/vocabulary/cards', cardData)
+        showSuccess('Card added successfully!')
+        await loadCards()
+        closeAddCardModal()
+      } catch (error) {
+        console.error('Error adding card:', error)
+        showError('Error adding card. Please try again.')
+      } finally {
+        saving.value = false
+      }
+    }
+    
+    const closeAddTagModal = () => {
+      showAddTagModal.value = false
+      tagForm.value = {
+        name: '',
+        description: ''
+      }
+    }
+    
+    const closeAddCardModal = () => {
+      showAddCardModal.value = false
+      cardForm.value = {
+        text: '',
+        context: '',
+        userComment: '',
+        materialId: '',
+        tags: []
+      }
+    }
+    
+    const loadTags = async () => {
+      try {
+        const response = await apiService.get('/tags')
+        tags.value = response.data || []
+      } catch (error) {
+        console.error('Error loading tags:', error)
+        tags.value = []
+      }
+    }
+    
+    const openTagManagement = async () => {
+      await loadTags()
+      showTagManagementModal.value = true
+    }
+    
+    const closeTagManagementModal = () => {
+      showTagManagementModal.value = false
+      selectedTags.value = []
+    }
+    
+    const openTagGuide = () => {
+      showTagGuideModal.value = true
+    }
+    
+    const closeTagGuideModal = () => {
+      showTagGuideModal.value = false
+    }
+    
+    const toggleDropdown = () => {
+      isDropdownOpen.value = !isDropdownOpen.value
+    }
+    
+    const closeDropdown = () => {
+      isDropdownOpen.value = false
+    }
+    
+    const toggleTagSelection = (tagId) => {
+      const index = selectedTags.value.indexOf(tagId)
+      if (index === -1) {
+        selectedTags.value.push(tagId)
+      } else {
+        selectedTags.value.splice(index, 1)
+      }
+    }
+    
+    // Tag association functionality is not supported by the backend
+    // Tags can only be added during card creation
+    const associateTagsWithCard = () => {
+      showInfo('Tag association is only available during card creation.\nPlease create a new card with the desired tags.')
+      closeTagManagementModal()
     }
     
     onMounted(async () => {
       await loadMaterials()
-      await loadHighlights()
+      await loadCards()
+      await loadTags()
     })
     
     return {
-      highlights,
+      cards,
       materials,
+      tags,
       loading,
       updating,
+      saving,
       showEditModal,
+      showAddTagModal,
+      showAddCardModal,
+      showTagManagementModal,
+      showTagGuideModal,
+      isDropdownOpen,
       selectedMaterial,
+      selectedTag,
+      selectedTags,
       searchTerm,
       editForm,
-      filteredHighlights,
-      loadHighlights,
-      editHighlight,
-      updateHighlight,
-      deleteHighlight,
+      tagForm,
+      cardForm,
+      filteredCards,
+      loadCards,
+      loadTags,
+      editCard,
+      updateCard,
+      deleteCard,
+      addTag,
+      addCard,
+      openTagManagement,
+      closeTagManagementModal,
+      openTagGuide,
+      closeTagGuideModal,
+      toggleDropdown,
+      closeDropdown,
+      toggleTagSelection,
+      associateTagsWithCard,
       closeEditModal,
+      closeAddTagModal,
+      closeAddCardModal,
       getMaterialTitle,
+      getTagName,
       formatDate,
-      filterHighlights
+      filterCards,
+      clearFilters
     }
   }
 }
 </script>
 
 <style scoped>
-.filters {
+/* Vocabulary Management Styles */
+.vocabulary {
+  min-height: 100vh;
+  padding: var(--space-8) var(--space-4);
+}
+
+/* Header Styles */
+.vocabulary-header {
+  margin-bottom: var(--space-10);
+  text-align: center;
+}
+
+.vocabulary-title {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+  background: linear-gradient(135deg, var(--primary-600), var(--secondary-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: var(--tracking-tight);
+}
+
+.vocabulary-subtitle {
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: var(--leading-relaxed);
+}
+
+/* Actions Section */
+.actions-section {
+  margin-bottom: var(--space-8);
+}
+
+.action-buttons {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: var(--space-4);
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.gap-1 {
-  gap: 1rem;
-}
-
-.highlights-list {
+.action-buttons .btn {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6);
+  font-weight: var(--font-medium);
+  border-radius: var(--radius-xl);
+  transition: all var(--transition-normal) var(--transition-ease-in-out);
+  cursor: pointer;
+  border: none;
+  font-size: var(--text-base);
 }
 
-.highlight-card {
-  transition: transform 0.2s;
+.btn-icon {
+  font-size: var(--text-lg);
 }
 
-.highlight-card:hover {
+.btn-text {
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wide);
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--surface-border);
+  position: relative;
+}
+
+.btn-outline:hover {
+  background-color: var(--primary-50);
+  color: var(--primary-600);
+  border-color: var(--primary-400);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-.highlight-header {
+.btn-arrow {
+  font-size: var(--text-xs);
+  transition: transform var(--transition-normal) var(--transition-ease-in-out);
+}
+
+.btn-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.action-dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--space-2);
+  background-color: var(--surface-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  min-width: 220px;
+  z-index: var(--z-dropdown);
+  animation: fadeIn var(--transition-normal) var(--transition-ease-out);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  width: 100%;
+  text-align: left;
+  background-color: transparent;
+  border: none;
+  transition: all var(--transition-normal) var(--transition-ease-in-out);
+}
+
+.btn-error:hover {
+  background-color: var(--error-700);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-arrow {
+  font-size: var(--text-xs);
+  transition: transform var(--transition-normal) var(--transition-ease-in-out);
+}
+
+.btn-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.action-dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--space-2);
+  background-color: var(--surface-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  min-width: 220px;
+  z-index: var(--z-dropdown);
+  animation: fadeIn var(--transition-normal) var(--transition-ease-out);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  width: 100%;
+  text-align: left;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-normal) var(--transition-ease-in-out);
+  color: var(--text-secondary);
+  border-radius: var(--radius-lg);
+  margin: var(--space-1);
+}
+
+.dropdown-item:hover {
+  background-color: var(--primary-50);
+  color: var(--primary-600);
+  transform: translateX(4px);
+}
+
+.item-icon {
+  font-size: var(--text-base);
+}
+
+.item-text {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+/* Filters Section */
+.filters-card {
+  margin-bottom: var(--space-8);
+  padding: var(--space-6);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+  background-color: var(--surface-primary);
+  border: 1px solid var(--surface-border);
+}
+
+.filter-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--surface-border);
 }
 
-.highlight-text {
+.filter-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
   margin: 0;
-  color: #2c3e50;
-  font-size: 1.2rem;
 }
 
-.highlight-actions {
+.filter-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-6);
+}
+
+.filter-group {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
-.highlight-context,
-.highlight-comment {
-  margin-bottom: 1rem;
+.filter-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: var(--space-1);
+  text-transform: uppercase;
 }
 
-.highlight-context p,
-.highlight-comment p {
-  margin: 0.5rem 0 0 0;
-  padding: 0.75rem;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  border-left: 4px solid #007bff;
+.search-group {
+  position: relative;
 }
 
-.highlight-meta {
+.search-input-group {
+  position: relative;
+}
+
+.search-input-group .form-control {
+  padding-right: var(--space-12);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: transparent;
+  border: none;
+  color: var(--text-light);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-normal) var(--transition-ease-in-out);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.search-clear-btn:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+/* Cards Section */
+.cards-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.cards-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.cards-count {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background-color: var(--primary-50);
+  color: var(--primary-600);
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  gap: var(--space-4);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--surface-border);
+  border-top-color: var(--primary-500);
+  border-radius: 50%;
+  animation: spin 1s var(--transition-ease-in-out) infinite;
+}
+
+.loading-spinner.small {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+.loading-text {
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  gap: var(--space-6);
+  text-align: center;
+  background-color: var(--surface-secondary);
+  border-radius: var(--radius-2xl);
+  border: 2px dashed var(--surface-border);
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: var(--space-4);
+}
+
+.empty-state-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.empty-state-description {
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+  max-width: 500px;
+  margin: 0;
+  line-height: var(--leading-relaxed);
+}
+
+/* Cards List */
+.cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.card-item {
+  transition: all var(--transition-normal) var(--transition-ease-in-out);
+  animation: fadeIn var(--transition-slow) var(--transition-ease-out);
+}
+
+.card-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-200);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.card-text-container {
+  flex: 1;
+}
+
+.card-text {
+  margin: 0 0 var(--space-3) 0;
+  color: var(--text-primary);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
+}
+
+.card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  font-size: 0.9rem;
-  color: #6c757d;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.card-details {
+  margin-top: var(--space-4);
+}
+
+.card-context,
+.card-comment {
+  margin-bottom: var(--space-6);
+}
+
+.detail-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+}
+
+.detail-content {
+  margin: 0;
+  padding: var(--space-4);
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-xl);
+  border-left: 4px solid var(--primary-500);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  font-size: var(--text-sm);
+}
+
+.card-meta {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--surface-border);
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-4);
 }
 
 .meta-item {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
+.meta-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-light);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.meta-value {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
+}
+
+/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--bg-overlay);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
+  animation: fadeIn var(--transition-normal) var(--transition-ease-out);
 }
 
 .modal {
-  background: white;
-  border-radius: 8px;
+  background-color: var(--surface-primary);
+  border-radius: var(--radius-2xl);
   width: 90%;
-  max-width: 500px;
+  max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: var(--shadow-2xl);
+  animation: slideUp var(--transition-normal) var(--transition-ease-out);
+  border: 1px solid var(--surface-border);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #eee;
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--surface-border);
 }
 
 .modal-header h3 {
   margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: var(--text-2xl);
   cursor: pointer;
-  color: #6c757d;
+  color: var(--text-light);
+  transition: color var(--transition-normal) var(--transition-ease-in-out);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+}
+
+.close-btn:hover {
+  color: var(--text-secondary);
+  background-color: var(--bg-tertiary);
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: var(--space-6);
 }
 
-@media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
+.form-group {
+  margin-bottom: var(--space-6);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: flex-end;
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--surface-border);
+}
+
+/* Tag Selection */
+.tag-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.tag-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 200px;
+}
+
+.tag-checkbox input[type="checkbox"] {
+  transform: scale(1.1);
+  accent-color: var(--primary-500);
+}
+
+/* Tag Management */
+.tag-management {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.tag-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+}
+
+.tag-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  background-color: var(--surface-secondary);
+  border: 1px solid var(--surface-border);
+  transition: all var(--transition-normal) var(--transition-ease-in-out);
+}
+
+.tag-item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-200);
+}
+
+.tag-info {
+  flex: 1;
+}
+
+.tag-info h5 {
+  margin: 0 0 var(--space-2) 0;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+}
+
+.tag-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.tag-actions-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--surface-border);
+}
+
+/* Tag Guide */
+.tag-guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.guide-section {
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  background-color: var(--surface-secondary);
+  border: 1px solid var(--surface-border);
+  transition: all var(--transition-normal) var(--transition-ease-in-out);
+}
+
+.guide-section:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-200);
+}
+
+.guide-section h4 {
+  margin: 0 0 var(--space-4) 0;
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+}
+
+.guide-section p {
+  margin: 0 0 var(--space-4) 0;
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+}
+
+.guide-section ul {
+  margin: 0;
+  padding-left: var(--space-6);
+  color: var(--text-secondary);
+}
+
+.guide-section li {
+  margin-bottom: var(--space-2);
+  line-height: var(--leading-relaxed);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-4));
   }
-  
-  .highlight-header {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-8));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .vocabulary {
+    padding: var(--space-6) var(--space-3);
+  }
+
+  .vocabulary-title {
+    font-size: var(--text-2xl);
+  }
+
+  .vocabulary-subtitle {
+    font-size: var(--text-base);
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-buttons .btn {
+    justify-content: center;
+  }
+
+  .filter-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .cards-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
+    gap: var(--space-3);
   }
-  
-  .highlight-meta {
+
+  .card-header {
     flex-direction: column;
-    gap: 0.5rem;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .card-actions {
+    align-self: flex-end;
+  }
+
+  .meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tag-checkbox {
+    flex: 1 1 100%;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .tag-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .tag-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .tag-actions-footer {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .vocabulary-title {
+    font-size: var(--text-xl);
+  }
+
+  .filter-controls {
+    gap: var(--space-4);
+  }
+
+  .card-text {
+    font-size: var(--text-lg);
+  }
+
+  .modal {
+    width: 95%;
+    margin: var(--space-2);
+  }
+
+  .modal-header,
+  .modal-body {
+    padding: var(--space-4);
   }
 }
 </style>

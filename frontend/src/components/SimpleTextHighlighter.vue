@@ -1,24 +1,24 @@
 <template>
   <div class="simple-highlighter">
     <div class="controls">
-      <button @click="toggleHighlightMode" :class="{ active: highlightMode }">
-        {{ highlightMode ? 'Exit Highlight Mode' : 'Enter Highlight Mode' }}
+      <button @click="toggleSelectionMode" :class="{ active: selectionMode }">
+        {{ selectionMode ? 'Exit Selection Mode' : 'Enter Selection Mode' }}
       </button>
     </div>
     
     <div 
       ref="textContainer"
       class="text-container"
-      :class="{ 'highlight-mode': highlightMode }"
+      :class="{ 'selection-mode': selectionMode }"
       @mouseup="handleMouseUp"
     >
       <p>
-        This is a sample text for testing highlighting functionality. 
-        Select any part of this text when highlight mode is active to create a highlight.
+        This is a sample text for testing text selection functionality. 
+        Select any part of this text when selection mode is active to create a card.
         You can select words, phrases, or entire sentences.
       </p>
       <p>
-        Here's another paragraph with more text to test the highlighting feature.
+        Here's another paragraph with more text to test the selection feature.
         The system should detect text selection and show a popup with options.
       </p>
     </div>
@@ -34,8 +34,8 @@
           Selected: "{{ selectedText }}"
         </div>
         <div class="popup-actions">
-          <button @click="createHighlight" class="btn-primary">
-            Create Highlight
+          <button @click="createCard" class="btn-primary">
+            Create Card
           </button>
           <button @click="closePopup" class="btn-secondary">
             Cancel
@@ -45,11 +45,11 @@
     </div>
 
     <!-- Results -->
-    <div v-if="highlights.length > 0" class="highlights-list">
-      <h3>Created Highlights:</h3>
-      <div v-for="(highlight, index) in highlights" :key="index" class="highlight-item">
-        <strong>{{ highlight.text }}</strong>
-        <span v-if="highlight.comment"> - {{ highlight.comment }}</span>
+    <div v-if="cards.length > 0" class="cards-list">
+      <h3>Created Cards:</h3>
+      <div v-for="(card, index) in cards" :key="index" class="card-item">
+        <strong>{{ card.text }}</strong>
+        <span v-if="card.comment"> - {{ card.comment }}</span>
       </div>
     </div>
   </div>
@@ -62,24 +62,24 @@ export default {
   name: 'SimpleTextHighlighter',
   setup() {
     const textContainer = ref(null)
-    const highlightMode = ref(false)
+    const selectionMode = ref(false)
     const showPopup = ref(false)
     const selectedText = ref('')
     const popupPosition = ref({ x: 0, y: 0 })
-    const highlights = ref([])
+    const cards = ref([])
 
-    const toggleHighlightMode = () => {
-      highlightMode.value = !highlightMode.value
-      if (!highlightMode.value) {
+    const toggleSelectionMode = () => {
+      selectionMode.value = !selectionMode.value
+      if (!selectionMode.value) {
         closePopup()
       }
-      console.log('Highlight mode:', highlightMode.value)
+      console.log('Selection mode:', selectionMode.value)
     }
 
     const handleMouseUp = (event) => {
-      console.log('Mouse up event', { highlightMode: highlightMode.value })
+      console.log('Mouse up event', { selectionMode: selectionMode.value })
       
-      if (!highlightMode.value) {
+      if (!selectionMode.value) {
         return
       }
 
@@ -117,13 +117,13 @@ export default {
       }, 100)
     }
 
-    const createHighlight = () => {
+    const createCard = () => {
       if (selectedText.value) {
-        highlights.value.push({
+        cards.value.push({
           text: selectedText.value,
-          comment: 'Test highlight'
+          comment: 'Test card'
         })
-        console.log('Created highlight:', selectedText.value)
+        console.log('Created card:', selectedText.value)
       }
       closePopup()
     }
@@ -141,14 +141,14 @@ export default {
 
     return {
       textContainer,
-      highlightMode,
+      selectionMode,
       showPopup,
       selectedText,
-      highlights,
+      cards,
       popupStyle,
-      toggleHighlightMode,
+      toggleSelectionMode,
       handleMouseUp,
-      createHighlight,
+      createCard,
       closePopup
     }
   }
@@ -188,7 +188,7 @@ button.active {
   font-size: 1.1rem;
 }
 
-.text-container.highlight-mode {
+.text-container.selection-mode {
   border-color: #409eff;
   background: #f0f9ff;
   cursor: text;
@@ -231,14 +231,14 @@ button.active {
   color: #666;
 }
 
-.highlights-list {
+.cards-list {
   margin-top: 2rem;
   padding: 1rem;
   background: #f8f9fa;
   border-radius: 6px;
 }
 
-.highlight-item {
+.card-item {
   padding: 0.5rem;
   margin: 0.5rem 0;
   background: white;

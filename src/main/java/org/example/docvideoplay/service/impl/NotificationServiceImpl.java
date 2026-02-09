@@ -163,8 +163,8 @@ public class NotificationServiceImpl implements NotificationService {
         NotificationDto notification = new NotificationDto(title, message, "SINGLE_REVIEW", todoItem.getDueDate());
         notification.setRelatedTodoId(todoItem.getId());
         
-        if (todoItem.getRelatedHighlight() != null) {
-            notification.setRelatedHighlightId(todoItem.getRelatedHighlight().getId());
+        if (todoItem.getRelatedCardId() != null) {
+            notification.setRelatedCardId(todoItem.getRelatedCardId());
         }
         
         pendingNotifications.add(notification);
@@ -180,8 +180,8 @@ public class NotificationServiceImpl implements NotificationService {
         NotificationDto notification = new NotificationDto(title, message, "OVERDUE_ALERT", todoItem.getDueDate());
         notification.setRelatedTodoId(todoItem.getId());
         
-        if (todoItem.getRelatedHighlight() != null) {
-            notification.setRelatedHighlightId(todoItem.getRelatedHighlight().getId());
+        if (todoItem.getRelatedCardId() != null) {
+            notification.setRelatedCardId(todoItem.getRelatedCardId());
         }
         
         return notification;

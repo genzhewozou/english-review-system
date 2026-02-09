@@ -116,7 +116,7 @@ export function useTodoService() {
    */
   const deleteTodoItem = async (id) => {
     try {
-      await apiService.delete(`/api/todos/${id}`)
+      await apiService.delete(`/todos/${id}`)
     } catch (error) {
       console.error(`Failed to delete todo item ${id}:`, error)
       if (error.response?.status === 404) {
@@ -132,7 +132,7 @@ export function useTodoService() {
    */
   const getTodoItemsDueToday = async () => {
     try {
-      const response = await apiService.get('/api/todos/due-today')
+      const response = await apiService.get('/todos/due-today')
       return response.data || []
     } catch (error) {
       console.error('Failed to fetch todo items due today:', error)
@@ -146,7 +146,7 @@ export function useTodoService() {
    */
   const getOverdueTodoItems = async () => {
     try {
-      const response = await apiService.get('/api/todos/overdue')
+      const response = await apiService.get('/todos/overdue')
       return response.data || []
     } catch (error) {
       console.error('Failed to fetch overdue todo items:', error)

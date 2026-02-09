@@ -2,7 +2,7 @@ package org.example.docvideoplay.dto.api;
 
 public class QuestionResultDto {
     
-    private Long highlightId;
+    private Long cardId;
     private String text;
     private String context;
     private String userComment;
@@ -12,9 +12,9 @@ public class QuestionResultDto {
     // Constructors
     public QuestionResultDto() {}
     
-    public QuestionResultDto(Long highlightId, String text, String context, String userComment,
+    public QuestionResultDto(Long cardId, String text, String context, String userComment,
                             Integer questionNumber, Integer totalQuestions) {
-        this.highlightId = highlightId;
+        this.cardId = cardId;
         this.text = text;
         this.context = context;
         this.userComment = userComment;
@@ -23,12 +23,12 @@ public class QuestionResultDto {
     }
     
     // Getters and Setters
-    public Long getHighlightId() {
-        return highlightId;
+    public Long getCardId() {
+        return cardId;
     }
     
-    public void setHighlightId(Long highlightId) {
-        this.highlightId = highlightId;
+    public void setCardId(Long cardId) {
+        this.cardId = cardId;
     }
     
     public String getText() {

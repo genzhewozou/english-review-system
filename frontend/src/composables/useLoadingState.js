@@ -9,11 +9,12 @@ export function useLoadingState() {
   /**
    * Set loading state for a specific operation
    * @param {string} key - Unique key for the operation
-   * @param {boolean} isLoading - Loading state
+   * @param {boolean|Object} isLoading - Loading state or loading options
    */
   const setLoading = (key, isLoading) => {
     if (isLoading) {
-      loadingStates.value.set(key, true)
+      const loadingOptions = typeof isLoading === 'object' ? isLoading : { active: true }
+      loadingStates.value.set(key, { ...loadingOptions, active: true })
     } else {
       loadingStates.value.delete(key)
     }
@@ -26,6 +27,15 @@ export function useLoadingState() {
    */
   const isLoading = (key) => {
     return loadingStates.value.has(key)
+  }
+
+  /**
+   * Get loading options for a specific operation
+   * @param {string} key - Operation key
+   * @returns {Object|null} Loading options or null if not loading
+   */
+  const getLoadingOptions = (key) => {
+    return loadingStates.value.get(key) || null
   }
 
   /**
@@ -55,11 +65,12 @@ export function useLoadingState() {
    * Wrapper for async operations with automatic loading state management
    * @param {string} key - Operation key
    * @param {Function} operation - Async operation
+   * @param {Object} options - Loading options
    * @returns {Promise} Operation result
    */
-  const withLoading = async (key, operation) => {
+  const withLoading = async (key, operation, options = {}) => {
     try {
-      setLoading(key, true)
+      setLoading(key, { ...options, active: true })
       return await operation()
     } finally {
       setLoading(key, false)
@@ -77,7 +88,8 @@ export function useLoadingState() {
     return {
       setLoading: (key, isLoading) => setLoading(scopedKey(key), isLoading),
       isLoading: (key) => isLoading(scopedKey(key)),
-      withLoading: (key, operation) => withLoading(scopedKey(key), operation),
+      getLoadingOptions: (key) => getLoadingOptions(scopedKey(key)),
+      withLoading: (key, operation, options) => withLoading(scopedKey(key), operation, options),
       clearScope: () => {
         const keysToDelete = Array.from(loadingStates.value.keys())
           .filter(key => key.startsWith(`${prefix}:`))
@@ -86,14 +98,37 @@ export function useLoadingState() {
     }
   }
 
+  /**
+   * Generate loading message based on operation type
+   * @param {string} operationType - Type of operation
+   * @returns {string} Loading message
+   */
+  const getLoadingMessage = (operationType) => {
+    const messages = {
+      loading: 'Loading...',
+      saving: 'Saving...',
+      updating: 'Updating...',
+      deleting: 'Deleting...',
+      fetching: 'Fetching data...',
+      processing: 'Processing...',
+      authenticating: 'Authenticating...',
+      uploading: 'Uploading...',
+      downloading: 'Downloading...'
+    }
+
+    return messages[operationType] || messages.loading
+  }
+
   return {
     setLoading,
     isLoading,
+    getLoadingOptions,
     isAnyLoading,
     getLoadingOperations,
     clearAllLoading,
     withLoading,
-    createScopedLoader
+    createScopedLoader,
+    getLoadingMessage
   }
 }
 
@@ -106,4 +141,43 @@ const globalLoadingState = useLoadingState()
  */
 export function useGlobalLoading() {
   return globalLoadingState
+}
+
+/**
+ * Utility function for creating loading states with common patterns
+ */
+export const loadingUtils = {
+  /**
+   * Create a loading state for form submission
+   * @param {Function} loader - Loading state manager
+   * @param {string} formName - Name of the form
+   * @param {Function} submitFn - Submission function
+   * @returns {Function} Wrapped submission function
+   */
+  createFormSubmitHandler: (loader, formName, submitFn) => {
+    return async (...args) => {
+      return loader.withLoading(`${formName}:submit`, async () => {
+        return await submitFn(...args)
+      }, {
+        message: 'Submitting form...'
+      })
+    }
+  },
+
+  /**
+   * Create a loading state for data fetching
+   * @param {Function} loader - Loading state manager
+   * @param {string} dataName - Name of the data
+   * @param {Function} fetchFn - Fetch function
+   * @returns {Function} Wrapped fetch function
+   */
+  createDataFetchHandler: (loader, dataName, fetchFn) => {
+    return async (...args) => {
+      return loader.withLoading(`${dataName}:fetch`, async () => {
+        return await fetchFn(...args)
+      }, {
+        message: 'Fetching data...'
+      })
+    }
+  }
 }

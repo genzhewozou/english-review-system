@@ -8,9 +8,9 @@ public class ReviewRecordResultDto {
     
     private Long id;
     private Long sessionId;
-    private Long highlightId;
-    private String highlightText;
-    private String highlightContext;
+    private Long cardId;
+    private String cardText;
+    private String cardContext;
     private AnswerQuality quality;
     private LocalDateTime reviewTime;
     private Integer responseTimeSeconds;
@@ -18,14 +18,14 @@ public class ReviewRecordResultDto {
     // Constructors
     public ReviewRecordResultDto() {}
     
-    public ReviewRecordResultDto(Long id, Long sessionId, Long highlightId, String highlightText,
-                                String highlightContext, AnswerQuality quality, LocalDateTime reviewTime,
+    public ReviewRecordResultDto(Long id, Long sessionId, Long cardId, String cardText,
+                                String cardContext, AnswerQuality quality, LocalDateTime reviewTime,
                                 Integer responseTimeSeconds) {
         this.id = id;
         this.sessionId = sessionId;
-        this.highlightId = highlightId;
-        this.highlightText = highlightText;
-        this.highlightContext = highlightContext;
+        this.cardId = cardId;
+        this.cardText = cardText;
+        this.cardContext = cardContext;
         this.quality = quality;
         this.reviewTime = reviewTime;
         this.responseTimeSeconds = responseTimeSeconds;
@@ -48,28 +48,28 @@ public class ReviewRecordResultDto {
         this.sessionId = sessionId;
     }
     
-    public Long getHighlightId() {
-        return highlightId;
+    public Long getCardId() {
+        return cardId;
     }
     
-    public void setHighlightId(Long highlightId) {
-        this.highlightId = highlightId;
+    public void setCardId(Long cardId) {
+        this.cardId = cardId;
     }
     
-    public String getHighlightText() {
-        return highlightText;
+    public String getCardText() {
+        return cardText;
     }
     
-    public void setHighlightText(String highlightText) {
-        this.highlightText = highlightText;
+    public void setCardText(String cardText) {
+        this.cardText = cardText;
     }
     
-    public String getHighlightContext() {
-        return highlightContext;
+    public String getCardContext() {
+        return cardContext;
     }
     
-    public void setHighlightContext(String highlightContext) {
-        this.highlightContext = highlightContext;
+    public void setCardContext(String cardContext) {
+        this.cardContext = cardContext;
     }
     
     public AnswerQuality getQuality() {

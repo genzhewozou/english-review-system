@@ -105,6 +105,7 @@ import { useRouter } from 'vue-router'
 import { useApiService } from '../composables/useApiService'
 import { useNotificationStore } from '../stores/notificationStore'
 import { useNotification } from '../composables/useNotification'
+import { confirmDelete } from '../utils/confirmDialog'
 
 export default {
   name: 'TodoList',
@@ -254,7 +255,8 @@ export default {
     }
     
     const deleteTodo = async (id) => {
-      if (!confirm('Are you sure you want to delete this task?')) return
+      const confirmed = await confirmDelete('task')
+      if (!confirmed) return
       
       try {
         await apiService.delete(`/todos/${id}`)
@@ -268,8 +270,24 @@ export default {
     
     const handleTodoClick = (todo) => {
       if (todo.type === 'REVIEW_SESSION') {
-        // Navigate to review page to start a session
-        router.push('/review')
+        console.log('Todo clicked:', todo);
+        // Navigate directly to the specific review session if relatedSessionId is available
+        if (todo.relatedSessionId) {
+          console.log('Navigating to review session:', todo.relatedSessionId);
+          router.push(`/review/${todo.relatedSessionId}`)
+        } 
+        // Navigate to review page with the related highlight ID if available
+        else if (todo.relatedHighlight && todo.relatedHighlight.id) {
+          console.log('Navigating to review with highlight:', todo.relatedHighlight.id);
+          router.push({
+            path: '/review',
+            query: { highlightId: todo.relatedHighlight.id }
+          })
+        } else {
+          console.log('Navigating to review page');
+          // Navigate to review page without specific highlight
+          router.push('/review')
+        }
       }
     }
     

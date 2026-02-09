@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { ElMessage, ElNotification } from 'element-plus'
+import { useNotification } from './useNotification'
 
 /**
  * Composable for centralized error handling and user feedback
@@ -7,23 +7,24 @@ import { ElMessage, ElNotification } from 'element-plus'
 export function useErrorHandler() {
   const isLoading = ref(false)
   const error = ref(null)
+  const { showError, showWarning, showSuccess, showInfo } = useNotification()
 
   /**
    * Handle API errors with user-friendly messages
-   * @param {Error} error - The error object
+   * @param {Error} errorObj - The error object
    * @param {string} context - Context where the error occurred
    * @param {boolean} showNotification - Whether to show notification (default: true)
    */
-  const handleError = (error, context = 'Operation', showNotification = true) => {
-    console.error(`${context} error:`, error)
+  const handleError = (errorObj, context = 'Operation', showNotification = true) => {
+    console.error(`${context} error:`, errorObj)
     
     let message = 'An unexpected error occurred'
     let type = 'error'
     
-    if (error.response) {
+    if (errorObj.response) {
       // HTTP error response
-      const status = error.response.status
-      const data = error.response.data
+      const status = errorObj.response.status
+      const data = errorObj.response.data
       
       switch (status) {
         case 400:
@@ -68,23 +69,20 @@ export function useErrorHandler() {
         default:
           message = data?.message || `${context} failed with status ${status}`
       }
-    } else if (error.code === 'ECONNABORTED') {
+    } else if (errorObj.code === 'ECONNABORTED') {
       message = 'Request timeout. Please check your connection and try again.'
       type = 'warning'
-    } else if (error.code === 'NETWORK_ERROR' || !error.response) {
-      message = 'Network error. Please check your internet connection.'
-      type = 'warning'
-    } else if (error.message) {
-      message = error.message
+    } else if (errorObj.message) {
+      message = errorObj.message
     }
     
     error.value = { message, type, context }
     
     if (showNotification) {
       if (type === 'error') {
-        ElMessage.error(message)
+        showError(message)
       } else {
-        ElMessage.warning(message)
+        showWarning(message)
       }
     }
     
@@ -100,7 +98,7 @@ export function useErrorHandler() {
     error.value = null
     
     if (showNotification) {
-      ElMessage.success(message)
+      showSuccess(message)
     }
   }
 
@@ -110,15 +108,33 @@ export function useErrorHandler() {
    * @returns {Function} Close function
    */
   const showLoadingNotification = (message = 'Processing...') => {
-    const notification = ElNotification({
-      title: 'Please wait',
-      message,
-      type: 'info',
-      duration: 0,
-      showClose: false
-    })
+    // Create a loading notification element
+    const loadingElement = document.createElement('div')
+    loadingElement.className = 'loading-notification'
+    loadingElement.innerHTML = `
+      <div class="loading-spinner small"></div>
+      <div class="loading-message">${message}</div>
+    `
     
-    return () => notification.close()
+    // Add to DOM
+    document.body.appendChild(loadingElement)
+    
+    // Trigger animation
+    setTimeout(() => {
+      loadingElement.classList.add('loading-visible')
+    }, 10)
+    
+    // Close function
+    const close = () => {
+      loadingElement.classList.remove('loading-visible')
+      setTimeout(() => {
+        if (document.body.contains(loadingElement)) {
+          document.body.removeChild(loadingElement)
+        }
+      }, 300)
+    }
+    
+    return close
   }
 
   /**
@@ -157,9 +173,9 @@ export function useErrorHandler() {
       }
       
       return result
-    } catch (error) {
-      handleError(error, errorContext, showError)
-      throw error
+    } catch (errorObj) {
+      handleError(errorObj, errorContext, showError)
+      throw errorObj
     } finally {
       isLoading.value = false
       if (closeLoading) {
@@ -213,7 +229,11 @@ export function useErrorHandler() {
     })
     
     if (errors.length > 0) {
-      errors.forEach(error => ElMessage.error(error))
+      // Show first error as toast, then console.log the rest
+      showError(errors[0])
+      if (errors.length > 1) {
+        console.error('Additional form validation errors:', errors.slice(1))
+      }
       return false
     }
     
@@ -233,15 +253,15 @@ export function useErrorHandler() {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         return await operation()
-      } catch (error) {
-        lastError = error
+      } catch (errorObj) {
+        lastError = errorObj
         
         if (attempt === maxRetries) {
           break
         }
         
         // Don't retry on client errors (4xx)
-        if (error.response && error.response.status >= 400 && error.response.status < 500) {
+        if (errorObj.response && errorObj.response.status >= 400 && errorObj.response.status < 500) {
           break
         }
         
@@ -253,6 +273,55 @@ export function useErrorHandler() {
     throw lastError
   }
 
+  /**
+   * Handle form field validation errors
+   * @param {Object} formData - Form data
+   * @param {string} field - Field name
+   * @param {string} errorMessage - Error message
+   */
+  const handleFieldError = (formData, field, errorMessage) => {
+    const fieldError = {
+      field,
+      message: errorMessage,
+      timestamp: Date.now()
+    }
+    
+    error.value = {
+      ...error.value,
+      fieldErrors: {
+        ...error.value?.fieldErrors,
+        [field]: fieldError
+      }
+    }
+    
+    showError(errorMessage)
+  }
+
+  /**
+   * Clear field error
+   * @param {string} field - Field name
+   */
+  const clearFieldError = (field) => {
+    if (error.value?.fieldErrors) {
+      const fieldErrors = { ...error.value.fieldErrors }
+      delete fieldErrors[field]
+      
+      error.value = {
+        ...error.value,
+        fieldErrors: Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined
+      }
+    }
+  }
+
+  /**
+   * Get field error
+   * @param {string} field - Field name
+   * @returns {Object|null} Field error or null
+   */
+  const getFieldError = (field) => {
+    return error.value?.fieldErrors?.[field] || null
+  }
+
   return {
     isLoading,
     error,
@@ -262,6 +331,67 @@ export function useErrorHandler() {
     withErrorHandling,
     clearError,
     validateForm,
-    withRetry
+    withRetry,
+    handleFieldError,
+    clearFieldError,
+    getFieldError
   }
+}
+
+// Add styles for loading notification
+if (!document.getElementById('error-handler-styles')) {
+  const style = document.createElement('style')
+  style.id = 'error-handler-styles'
+  style.textContent = `
+    /* Loading notification */
+    .loading-notification {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background-color: var(--surface-primary);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      padding: var(--space-4);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      z-index: var(--z-modal);
+      opacity: 0;
+      transition: all var(--transition-normal) var(--transition-ease-out);
+    }
+
+    .loading-notification.loading-visible {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .loading-notification .loading-spinner {
+      border: 2px solid var(--surface-border);
+      border-top: 2px solid var(--primary-600);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading-notification .loading-spinner.small {
+      width: 20px;
+      height: 20px;
+      border-width: 2px;
+    }
+
+    .loading-notification .loading-message {
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      color: var(--text-secondary);
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `
+  document.head.appendChild(style)
 }

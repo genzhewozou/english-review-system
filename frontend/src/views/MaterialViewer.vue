@@ -1,210 +1,210 @@
 <template>
-  <div class="material-viewer">
+  <main class="material-viewer" aria-labelledby="material-title">
     <!-- Loading State -->
-    <div v-if="loading" class="loading-container">
-      <el-skeleton :rows="5" animated />
-    </div>
+    <section v-if="loading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading material...</p>
+    </section>
     
     <!-- Error State -->
-    <div v-else-if="!material" class="error-state">
-      <el-result
-        icon="warning"
-        title="Material Not Found"
-        sub-title="The requested material could not be found."
-      >
-        <template #extra>
-          <el-button type="primary" @click="$router.push('/materials')">
+    <section v-else-if="!material" class="error-state">
+      <div class="error-content">
+        <div class="error-icon">⚠️</div>
+        <h2 class="error-title">Material Not Found</h2>
+        <p class="error-description">The requested material could not be found.</p>
+        <div class="error-actions">
+          <button @click="$router.push('/materials')" class="btn btn-primary" tabindex="0">
             Back to Materials
-          </el-button>
-        </template>
-      </el-result>
-    </div>
+          </button>
+        </div>
+      </div>
+    </section>
     
     <!-- Material Content -->
     <div v-else class="material-container">
       <!-- Material Header -->
-      <div class="material-header">
+      <header class="material-header">
         <div class="header-content">
           <div class="material-info">
-            <h1 class="material-title">{{ material.title }}</h1>
+            <h1 id="material-title" class="material-title">{{ material.title }}</h1>
             <div class="material-meta">
-              <el-tag :type="getTypeTagType(material.type)" size="small">
+              <span :class="['badge', getTypeBadgeClass(material.type)]">
                 {{ formatMaterialType(material.type) }}
-              </el-tag>
-              <span class="meta-item">
-                <el-icon><Document /></el-icon>
+              </span>
+              <span class="meta-item" aria-label="File name">
+                <span class="meta-icon">📄</span>
                 {{ material.fileName }}
               </span>
-              <span class="meta-item">
-                <el-icon><DataAnalysis /></el-icon>
+              <span class="meta-item" aria-label="File size">
+                <span class="meta-icon">📊</span>
                 {{ formatFileSize(material.fileSize) }}
               </span>
-              <span class="meta-item">
-                <el-icon><Calendar /></el-icon>
+              <span class="meta-item" aria-label="Created date">
+                <span class="meta-icon">📅</span>
                 {{ formatDate(material.createdDate) }}
               </span>
             </div>
           </div>
           
           <div class="header-actions">
-            <el-button @click="$router.push('/materials')" :icon="ArrowLeft">
-              Back
-            </el-button>
-            <el-button @click="downloadMaterial" :icon="Download">
-              Download
-            </el-button>
-            <el-button 
-              type="primary" 
-              @click="toggleHighlightMode" 
-              :icon="EditPen"
-              :class="{ 'is-active': isHighlightMode }"
+            <button @click="$router.push('/materials')" class="btn btn-outline" aria-label="Back to materials" tabindex="0">
+              <span class="btn-icon">←</span>
+              <span class="btn-text">Back</span>
+            </button>
+            <button @click="downloadMaterial" class="btn btn-outline" aria-label="Download material" tabindex="0">
+              <span class="btn-icon">↓</span>
+              <span class="btn-text">Download</span>
+            </button>
+            <button 
+              @click="toggleSelectionMode" 
+              :class="['btn', isSelectionMode ? 'btn-primary' : 'btn-outline']"
+              aria-label="Toggle selection mode"
+              tabindex="0"
             >
-              {{ isHighlightMode ? 'Exit Highlight' : 'Highlight Mode' }}
-            </el-button>
+              <span class="btn-icon">✏️</span>
+              <span class="btn-text">{{ isSelectionMode ? 'Exit Selection' : 'Selection Mode' }}</span>
+            </button>
           </div>
         </div>
-      </div>
+      </header>
 
       <!-- Mode Toggle -->
-      <div v-if="isHighlightMode" class="highlight-toolbar">
-        <el-alert
-          title="Highlight Mode Active"
-          description="Select text to create highlights. Click on existing highlights to edit them."
-          type="info"
-          :closable="false"
-          show-icon
-        />
-      </div>
+      <section v-if="isSelectionMode" class="card-toolbar">
+        <div class="alert alert-info">
+          <div class="alert-icon">ℹ️</div>
+          <div class="alert-content">
+            <h3 class="alert-title">Selection Mode Active</h3>
+            <p class="alert-description">Select text to create cards. Click on existing cards to edit them.</p>
+          </div>
+        </div>
+      </section>
 
       <!-- Main Content Area -->
       <div class="content-area">
         <!-- Material Viewer -->
-        <div class="material-content" :class="{ 'highlight-mode': isHighlightMode }">
+        <section class="material-content" :class="{ 'selection-mode': isSelectionMode }">
           <!-- Document Viewer -->
           <div v-if="material.type === 'DOCUMENT'" class="document-viewer">
             <DocumentViewer
-              :material="material"
-              :highlights="highlights"
-              :highlight-mode="isHighlightMode"
-              @text-selected="handleTextSelection"
-              @highlight-clicked="handleHighlightClick"
-            />
+                :material="material"
+                :cards="cards"
+                :selection-mode="isSelectionMode"
+                @text-selected="handleTextSelection"
+                @card-clicked="handleCardClick"
+              />
           </div>
           
           <!-- Video Player -->
           <div v-else-if="material.type === 'VIDEO'" class="video-viewer">
-            <el-card>
+            <div class="card">
               <VideoPlayer
                 :material="material"
-                :highlights="highlights"
-                :highlight-mode="isHighlightMode"
+                :cards="cards"
+                :selection-mode="isSelectionMode"
                 @text-selected="handleTextSelection"
-                @highlight-clicked="handleHighlightClick"
+                @card-clicked="handleCardClick"
               />
-            </el-card>
+            </div>
           </div>
           
           <!-- Article Viewer -->
           <div v-else-if="material.type === 'ARTICLE'" class="article-viewer">
-            <el-card>
+            <div class="card">
               <ArticleViewer
                 :material="material"
-                :highlights="highlights"
-                :highlight-mode="isHighlightMode"
+                :cards="cards"
+                :selection-mode="isSelectionMode"
                 @text-selected="handleTextSelection"
-                @highlight-clicked="handleHighlightClick"
+                @card-clicked="handleCardClick"
               />
-            </el-card>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Highlights Sidebar -->
-        <div class="highlights-sidebar">
-          <el-card>
-            <template #header>
-              <div class="sidebar-header">
-                <h3>Highlights</h3>
-                <el-badge :value="highlights.length" type="primary" />
+        <!-- Cards Sidebar -->
+        <aside class="cards-sidebar">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="sidebar-title">Cards</h3>
+              <span class="cards-count badge badge-primary">{{ cards.length }}</span>
+            </div>
+            <div class="card-body">
+              <!-- Cards List -->
+              <div v-if="cards.length === 0" class="empty-cards">
+                <div class="empty-content">
+                  <div class="empty-icon">📝</div>
+                  <h4 class="empty-title">No cards yet</h4>
+                  <p class="empty-description">Start selecting text to create vocabulary cards!</p>
+                </div>
               </div>
-            </template>
+              
+              <div v-else class="cards-list">
+                <CardItem
+                  v-for="card in sortedCards"
+                  :key="card.id"
+                  :card="card"
+                  @edit="editCard"
+                  @delete="deleteCard"
+                  @click="scrollToCard"
+                />
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
 
-            <!-- Highlights List -->
-            <div v-if="highlights.length === 0" class="empty-highlights">
-              <el-empty
-                description="No highlights yet"
-                :image-size="80"
-              >
-                <p>Start highlighting text to create vocabulary entries!</p>
-              </el-empty>
-            </div>
-            
-            <div v-else class="highlights-list">
-              <HighlightItem
-                v-for="highlight in sortedHighlights"
-                :key="highlight.id"
-                :highlight="highlight"
-                @edit="editHighlight"
-                @delete="deleteHighlight"
-                @click="scrollToHighlight"
-              />
-            </div>
-          </el-card>
+      <!-- Card Creation Dialog -->
+      <div v-if="showCardDialog" class="modal-overlay" @click="resetCardDialog">
+        <div class="modal" @click.stop>
+          <div class="modal-header">
+            <h3>Create Card</h3>
+            <button @click="resetCardDialog" class="close-btn" aria-label="Close dialog">&times;</button>
+          </div>
+          <div class="modal-body">
+            <CardForm
+              :selected-text="selectedText"
+              :context="selectedContext"
+              :material-id="material.id"
+              @save="handleCardSave"
+              @cancel="resetCardDialog"
+            />
+          </div>
         </div>
       </div>
 
-      <!-- Highlight Creation Dialog -->
-      <el-dialog
-        v-model="showHighlightDialog"
-        title="Create Highlight"
-        width="500px"
-        @close="resetHighlightDialog"
-      >
-        <HighlightForm
-          :selected-text="selectedText"
-          :context="selectedContext"
-          :material-id="material.id"
-          @save="handleHighlightSave"
-          @cancel="resetHighlightDialog"
-        />
-      </el-dialog>
-
-      <!-- Highlight Edit Dialog -->
-      <el-dialog
-        v-model="showEditDialog"
-        title="Edit Highlight"
-        width="500px"
-        @close="resetEditDialog"
-      >
-        <HighlightForm
-          :highlight="editingHighlight"
-          :material-id="material.id"
-          @save="handleHighlightUpdate"
-          @cancel="resetEditDialog"
-        />
-      </el-dialog>
+      <!-- Card Edit Dialog -->
+      <div v-if="showEditDialog" class="modal-overlay" @click="resetEditDialog">
+        <div class="modal" @click.stop>
+          <div class="modal-header">
+            <h3>Edit Card</h3>
+            <button @click="resetEditDialog" class="close-btn" aria-label="Close dialog">&times;</button>
+          </div>
+          <div class="modal-body">
+            <CardForm
+              :card="editingCard"
+              :material-id="material.id"
+              @save="handleCardUpdate"
+              @cancel="resetEditDialog"
+            />
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
+  </main>
 </template>
 
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
-import {
-  ArrowLeft,
-  Download,
-  EditPen,
-  Document,
-  DataAnalysis,
-  Calendar
-} from '@element-plus/icons-vue'
 import { useApiService } from '../composables/useApiService'
+import { useNotification } from '../composables/useNotification'
 import DocumentViewer from '../components/DocumentViewer.vue'
 import VideoPlayer from '../components/VideoPlayer.vue'
 import ArticleViewer from '../components/ArticleViewer.vue'
-import HighlightItem from '../components/HighlightItem.vue'
-import HighlightForm from '../components/HighlightForm.vue'
+import CardItem from '../components/CardItem.vue'
+import CardForm from '../components/CardForm.vue'
+import { confirmCardDelete } from '../utils/confirmDialog'
 
 export default {
   name: 'MaterialViewer',
@@ -212,30 +212,31 @@ export default {
     DocumentViewer,
     VideoPlayer,
     ArticleViewer,
-    HighlightItem,
-    HighlightForm
+    CardItem,
+    CardForm
   },
   setup() {
     const route = useRoute()
     const router = useRouter()
     const material = ref(null)
-    const highlights = ref([])
+    const cards = ref([])
     const loading = ref(false)
     
-    // Highlight mode state
-    const isHighlightMode = ref(false)
-    const showHighlightDialog = ref(false)
+    // Selection mode state
+    const isSelectionMode = ref(false)
+    const showCardDialog = ref(false)
     const showEditDialog = ref(false)
     const selectedText = ref('')
     const selectedContext = ref('')
     const selectedTextPosition = ref({ startPosition: 0, endPosition: 0 })
-    const editingHighlight = ref(null)
+    const editingCard = ref(null)
     
     const { apiService } = useApiService()
+    const { showSuccess, showError } = useNotification()
     
     // Computed properties
-    const sortedHighlights = computed(() => {
-      return [...highlights.value].sort((a, b) => {
+    const sortedCards = computed(() => {
+      return [...cards.value].sort((a, b) => {
         // Sort by position if available, otherwise by creation date
         if (a.startPosition !== undefined && b.startPosition !== undefined) {
           return a.startPosition - b.startPosition
@@ -244,14 +245,14 @@ export default {
       })
     })
 
-    const materialTypeColors = {
-      VIDEO: 'primary',
-      DOCUMENT: 'success',
-      ARTICLE: 'warning'
+    const materialTypeClasses = {
+      VIDEO: 'badge-primary',
+      DOCUMENT: 'badge-success',
+      ARTICLE: 'badge-warning'
     }
 
-    const getTypeTagType = (type) => {
-      return materialTypeColors[type] || 'info'
+    const getTypeBadgeClass = (type) => {
+      return materialTypeClasses[type] || 'badge-info'
     }
 
     const formatMaterialType = (type) => {
@@ -271,29 +272,29 @@ export default {
         const response = await apiService.get(`/materials/${materialId}`)
         material.value = response.data
         
-        // Load highlights for this material
-        await loadHighlights(materialId)
+        // Load cards for this material
+        await loadCards(materialId)
         
-        // Check if we should start in highlight mode
-        if (route.query.mode === 'highlight') {
-          isHighlightMode.value = true
+        // Check if we should start in selection mode
+        if (route.query.mode === 'selection' || route.query.mode === 'highlight') {
+          isSelectionMode.value = true
         }
       } catch (error) {
         console.error('Error loading material:', error)
-        ElMessage.error('Failed to load material')
+        alert('Failed to load material')
         material.value = null
       } finally {
         loading.value = false
       }
     }
     
-    const loadHighlights = async (materialId) => {
+    const loadCards = async (materialId) => {
       try {
-        const response = await apiService.get(`/vocabulary/materials/${materialId}/highlights`)
-        highlights.value = response.data || []
+        const response = await apiService.get(`/vocabulary/material/${materialId}`)
+        cards.value = response.data || []
       } catch (error) {
-        console.error('Error loading highlights:', error)
-        highlights.value = []
+        console.error('Error loading cards:', error)
+        cards.value = []
       }
     }
     
@@ -307,25 +308,30 @@ export default {
         )
       } catch (error) {
         console.error('Error downloading material:', error)
-        ElMessage.error('Failed to download material')
+        alert('Failed to download material')
       }
     }
 
-    const toggleHighlightMode = () => {
-      isHighlightMode.value = !isHighlightMode.value
+    const toggleSelectionMode = () => {
+      isSelectionMode.value = !isSelectionMode.value
       
-      if (isHighlightMode.value) {
-        ElMessage.info('Highlight mode activated. Select text to create highlights.')
+      if (isSelectionMode.value) {
+        alert('Selection mode activated. Select text to create cards.')
       } else {
-        ElMessage.info('Highlight mode deactivated.')
+        alert('Selection mode deactivated.')
       }
     }
 
     const handleTextSelection = (selection) => {
-      console.log('MaterialViewer: handleTextSelection called', { selection, isHighlightMode: isHighlightMode.value })
+      console.log('MaterialViewer: handleTextSelection called', { selection, isSelectionMode: isSelectionMode.value })
       
-      if (!isHighlightMode.value) {
-        console.log('MaterialViewer: Not in highlight mode, returning')
+      if (!isSelectionMode.value) {
+        console.log('MaterialViewer: Not in selection mode, returning')
+        return
+      }
+      
+      if (!selection || !selection.text) {
+        console.log('MaterialViewer: No text selected, returning')
         return
       }
       
@@ -334,96 +340,89 @@ export default {
       
       // Store the position data for later use
       selectedTextPosition.value = {
-        startPosition: selection.startPosition,
-        endPosition: selection.endPosition
+        startPosition: selection.startPosition || 0,
+        endPosition: selection.endPosition || selection.text.length
       }
       
-      console.log('MaterialViewer: Showing highlight dialog', { selectedText: selectedText.value })
-      showHighlightDialog.value = true
+      console.log('MaterialViewer: Showing card dialog', { selectedText: selectedText.value })
+      showCardDialog.value = true
     }
 
-    const handleHighlightClick = (highlight) => {
-      if (isHighlightMode.value) {
-        editingHighlight.value = highlight
+    const handleCardClick = (card) => {
+      if (isSelectionMode.value) {
+        editingCard.value = card
         showEditDialog.value = true
       }
     }
 
-    const handleHighlightSave = async (highlightData) => {
+    const handleCardSave = async (cardData) => {
       try {
-        const response = await apiService.post('/vocabulary/highlights', {
+        const response = await apiService.post('/vocabulary/cards', {
           materialId: material.value.id,
           text: selectedText.value,
           context: selectedContext.value,
           startPosition: selectedTextPosition.value.startPosition,
           endPosition: selectedTextPosition.value.endPosition,
-          userComment: highlightData.comment
+          userComment: cardData.comment
         })
         
-        highlights.value.push(response.data)
-        resetHighlightDialog()
-        ElMessage.success('Highlight created successfully')
+        cards.value.push(response.data)
+        resetCardDialog()
+        showSuccess('Card created successfully')
       } catch (error) {
-        console.error('Error creating highlight:', error)
-        ElMessage.error('Failed to create highlight')
+        console.error('Error creating card:', error)
+        showError('Failed to create card')
       }
     }
 
-    const handleHighlightUpdate = async (highlightData) => {
+    const handleCardUpdate = async (cardData) => {
       try {
-        const response = await apiService.put(`/vocabulary/highlights/${editingHighlight.value.id}`, {
-          userComment: highlightData.comment
+        const response = await apiService.put(`/vocabulary/cards/${editingCard.value.id}`, {
+          userComment: cardData.comment
         })
         
-        const index = highlights.value.findIndex(h => h.id === editingHighlight.value.id)
+        const index = cards.value.findIndex(c => c.id === editingCard.value.id)
         if (index !== -1) {
-          highlights.value[index] = response.data
+          cards.value[index] = response.data
         }
         
         resetEditDialog()
-        ElMessage.success('Highlight updated successfully')
+        showSuccess('Card updated successfully')
       } catch (error) {
-        console.error('Error updating highlight:', error)
-        ElMessage.error('Failed to update highlight')
+        console.error('Error updating card:', error)
+        showError('Failed to update card')
       }
     }
 
-    const editHighlight = (highlight) => {
-      editingHighlight.value = highlight
+    const editCard = (card) => {
+      editingCard.value = card
       showEditDialog.value = true
     }
     
-    const deleteHighlight = async (highlight) => {
+    const deleteCard = async (card) => {
       try {
-        await ElMessageBox.confirm(
-          `Are you sure you want to delete the highlight "${highlight.text}"?`,
-          'Confirm Deletion',
-          {
-            confirmButtonText: 'Delete',
-            cancelButtonText: 'Cancel',
-            type: 'warning'
-          }
-        )
-        
-        await apiService.delete(`/vocabulary/highlights/${highlight.id}`)
-        highlights.value = highlights.value.filter(h => h.id !== highlight.id)
-        ElMessage.success('Highlight deleted successfully')
-      } catch (error) {
-        if (error !== 'cancel') {
-          console.error('Error deleting highlight:', error)
-          ElMessage.error('Failed to delete highlight')
+        const confirmed = await confirmCardDelete(card.text)
+        if (!confirmed) {
+          return
         }
+        
+        await apiService.delete(`/vocabulary/cards/${card.id}`)
+        cards.value = cards.value.filter(c => c.id !== card.id)
+        showSuccess('Card deleted successfully')
+      } catch (error) {
+        console.error('Error deleting card:', error)
+        showError('Failed to delete card')
       }
     }
 
-    const scrollToHighlight = (highlight) => {
-      // This would scroll to the highlight in the document
+    const scrollToCard = (card) => {
+      // This would scroll to the card in the document
       // Implementation depends on the specific viewer component
-      console.log('Scrolling to highlight:', highlight.id)
+      console.log('Scrolling to card:', card.id)
     }
 
-    const resetHighlightDialog = () => {
-      showHighlightDialog.value = false
+    const resetCardDialog = () => {
+      showCardDialog.value = false
       selectedText.value = ''
       selectedContext.value = ''
       selectedTextPosition.value = { startPosition: 0, endPosition: 0 }
@@ -431,7 +430,7 @@ export default {
 
     const resetEditDialog = () => {
       showEditDialog.value = false
-      editingHighlight.value = null
+      editingCard.value = null
     }
     
     const formatFileSize = (bytes) => {
@@ -448,8 +447,8 @@ export default {
     
     // Keyboard shortcuts
     const handleKeydown = (event) => {
-      if (event.key === 'Escape' && isHighlightMode.value) {
-        toggleHighlightMode()
+      if (event.key === 'Escape' && isSelectionMode.value) {
+        toggleSelectionMode()
       }
     }
 
@@ -464,36 +463,32 @@ export default {
     
     return {
       material,
-      highlights,
+      cards,
       loading,
-      isHighlightMode,
-      showHighlightDialog,
+      isSelectionMode,
+      showCardDialog,
       showEditDialog,
       selectedText,
       selectedContext,
-      editingHighlight,
-      sortedHighlights,
-      getTypeTagType,
+      editingCard,
+      sortedCards,
+      getTypeBadgeClass,
       formatMaterialType,
+      loadMaterial,
+      loadCards,
       downloadMaterial,
-      toggleHighlightMode,
+      toggleSelectionMode,
       handleTextSelection,
-      handleHighlightClick,
-      handleHighlightSave,
-      handleHighlightUpdate,
-      editHighlight,
-      deleteHighlight,
-      scrollToHighlight,
-      resetHighlightDialog,
+      handleCardClick,
+      handleCardSave,
+      handleCardUpdate,
+      editCard,
+      deleteCard,
+      scrollToCard,
+      resetCardDialog,
       resetEditDialog,
       formatFileSize,
-      formatDate,
-      ArrowLeft,
-      Download,
-      EditPen,
-      Document,
-      DataAnalysis,
-      Calendar
+      formatDate
     }
   }
 }
@@ -503,35 +498,93 @@ export default {
 .material-viewer {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: var(--space-4);
 }
 
 .loading-container {
-  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  gap: var(--space-4);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--surface-border);
+  border-top-color: var(--primary-500);
+  border-radius: 50%;
+  animation: spin 1s var(--transition-ease-in-out) infinite;
+}
+
+.loading-text {
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 .error-state {
-  padding: 3rem 1rem;
+  padding: var(--space-16) var(--space-4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.error-content {
+  text-align: center;
+  max-width: 500px;
+  padding: var(--space-8);
+  background-color: var(--surface-primary);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--surface-border);
+}
+
+.error-icon {
+  font-size: 4rem;
+  margin-bottom: var(--space-4);
+}
+
+.error-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.error-description {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-6) 0;
+}
+
+.error-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
 }
 
 .material-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--space-6);
 }
 
 .material-header {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: var(--surface-primary);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--surface-border);
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 2rem;
+  gap: var(--space-8);
 }
 
 .material-info {
@@ -540,49 +593,99 @@ export default {
 }
 
 .material-title {
-  margin: 0 0 1rem 0;
-  color: #303133;
-  font-size: 1.75rem;
-  font-weight: 600;
-  line-height: 1.4;
+  margin: 0 0 var(--space-4) 0;
+  color: var(--text-primary);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-tight);
   word-break: break-word;
 }
 
 .material-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--space-4);
   align-items: center;
 }
 
 .meta-item {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  color: #606266;
-  font-size: 0.9rem;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.meta-icon {
+  font-size: var(--text-base);
 }
 
 .header-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-3);
   flex-shrink: 0;
 }
 
-.header-actions .el-button.is-active {
-  background-color: #409eff;
-  border-color: #409eff;
-  color: white;
+.header-actions .btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-normal);
 }
 
-.highlight-toolbar {
-  margin-bottom: 1rem;
+.header-actions .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.card-toolbar {
+  margin-bottom: var(--space-4);
+}
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--surface-border);
+  background-color: var(--surface-primary);
+}
+
+.alert-info {
+  border-left: 4px solid var(--info-500);
+  background-color: var(--info-50);
+}
+
+.alert-icon {
+  font-size: var(--text-xl);
+  flex-shrink: 0;
+  margin-top: var(--space-1);
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-title {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.alert-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 .content-area {
   display: grid;
   grid-template-columns: 1fr 350px;
-  gap: 1.5rem;
+  gap: var(--space-6);
   align-items: start;
 }
 
@@ -590,45 +693,180 @@ export default {
   min-height: 600px;
 }
 
-.material-content.highlight-mode {
+.material-content.selection-mode {
   cursor: text;
 }
 
-.highlights-sidebar {
+.cards-sidebar {
   position: sticky;
-  top: 1rem;
-  max-height: calc(100vh - 2rem);
+  top: var(--space-4);
+  max-height: calc(100vh - var(--space-8));
   overflow-y: auto;
 }
 
-.sidebar-header {
+.card {
+  background-color: var(--surface-primary);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--surface-border);
+  transition: var(--transition-normal);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+.card-header {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--surface-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.sidebar-header h3 {
+.sidebar-title {
   margin: 0;
-  color: #303133;
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
 }
 
-.empty-highlights {
+.card-body {
+  padding: var(--space-4);
+}
+
+.empty-cards {
   text-align: center;
-  padding: 2rem 1rem;
+  padding: var(--space-8);
 }
 
-.empty-highlights p {
-  margin-top: 1rem;
-  color: #909399;
-  font-size: 0.9rem;
-}
-
-.highlights-list {
+.empty-content {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-2);
+}
+
+.empty-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.empty-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 300px;
+  line-height: var(--leading-relaxed);
+}
+
+.cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   max-height: 500px;
   overflow-y: auto;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-overlay);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: var(--z-modal);
+  animation: fadeIn var(--transition-normal) var(--transition-ease-out);
+}
+
+.modal {
+  background-color: var(--surface-primary);
+  border-radius: var(--radius-2xl);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-2xl);
+  animation: slideUp var(--transition-normal) var(--transition-ease-out);
+  border: 1px solid var(--surface-border);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: var(--text-2xl);
+  cursor: pointer;
+  color: var(--text-light);
+  transition: color var(--transition-normal) var(--transition-ease-in-out);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+}
+
+.close-btn:hover {
+  color: var(--text-secondary);
+  background-color: var(--bg-tertiary);
+}
+
+.modal-body {
+  padding: var(--space-6);
+}
+
+/* Animations */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-4));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-8));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Responsive design */
@@ -637,7 +875,7 @@ export default {
     grid-template-columns: 1fr;
   }
   
-  .highlights-sidebar {
+  .cards-sidebar {
     position: static;
     max-height: none;
   }
@@ -645,7 +883,7 @@ export default {
 
 @media (max-width: 768px) {
   .material-viewer {
-    padding: 0.5rem;
+    padding: var(--space-3);
   }
   
   .header-content {
@@ -657,14 +895,57 @@ export default {
     justify-content: stretch;
   }
   
-  .header-actions .el-button {
+  .header-actions .btn {
     flex: 1;
+    justify-content: center;
   }
   
   .material-meta {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: var(--space-2);
+  }
+  
+  .material-title {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .material-header {
+    border: 2px solid var(--text-primary);
+  }
+  
+  .card {
+    border: 2px solid var(--text-primary);
+  }
+  
+  .alert {
+    border: 2px solid var(--text-primary);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner {
+    animation: none;
+  }
+  
+  .modal-overlay {
+    animation: none;
+  }
+  
+  .modal {
+    animation: none;
+  }
+  
+  .header-actions .btn:hover {
+    transform: none;
+  }
+  
+  .card:hover {
+    transform: none;
   }
 }
 </style>

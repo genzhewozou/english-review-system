@@ -13,6 +13,9 @@ public class ReviewSession extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+    
     @Column(nullable = false)
     private LocalDateTime startTime;
     
@@ -27,18 +30,15 @@ public class ReviewSession extends BaseEntity {
     
     @Column
     private Integer correctAnswers = 0;
-    
-    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ReviewRecord> reviewRecords = new ArrayList<>();
 
     /**
-     * Optional list of highlight IDs explicitly selected for this session.
-     * When present, the session will only cycle through these highlights.
+     * Optional list of card IDs explicitly selected for this session.
+     * When present, the session will only cycle through these cards.
      */
     @ElementCollection
-    @CollectionTable(name = "review_session_highlights", joinColumns = @JoinColumn(name = "session_id"))
-    @Column(name = "highlight_id")
-    private List<Long> selectedHighlightIds = new ArrayList<>();
+    @CollectionTable(name = "review_session_cards", joinColumns = @JoinColumn(name = "session_id"))
+    @Column(name = "card_id")
+    private List<Long> selectedCardIds = new ArrayList<>();
     
     // Constructors
     public ReviewSession() {
@@ -46,6 +46,16 @@ public class ReviewSession extends BaseEntity {
     }
     
     public ReviewSession(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+    
+    public ReviewSession(Long userId) {
+        this.userId = userId;
+        this.startTime = LocalDateTime.now();
+    }
+    
+    public ReviewSession(Long userId, LocalDateTime startTime) {
+        this.userId = userId;
         this.startTime = startTime;
     }
     
@@ -98,35 +108,23 @@ public class ReviewSession extends BaseEntity {
         this.correctAnswers = correctAnswers;
     }
     
-    public List<ReviewRecord> getReviewRecords() {
-        return reviewRecords;
+    public Long getUserId() {
+        return userId;
     }
     
-    public void setReviewRecords(List<ReviewRecord> reviewRecords) {
-        this.reviewRecords = reviewRecords;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
-    public List<Long> getSelectedHighlightIds() {
-        return selectedHighlightIds;
+    public List<Long> getSelectedCardIds() {
+        return selectedCardIds;
     }
 
-    public void setSelectedHighlightIds(List<Long> selectedHighlightIds) {
-        this.selectedHighlightIds = selectedHighlightIds;
+    public void setSelectedCardIds(List<Long> selectedCardIds) {
+        this.selectedCardIds = selectedCardIds;
     }
     
     // Helper methods
-    public void addReviewRecord(ReviewRecord reviewRecord) {
-        reviewRecords.add(reviewRecord);
-        reviewRecord.setSession(this);
-        this.totalQuestions = reviewRecords.size();
-    }
-    
-    public void removeReviewRecord(ReviewRecord reviewRecord) {
-        reviewRecords.remove(reviewRecord);
-        reviewRecord.setSession(null);
-        this.totalQuestions = reviewRecords.size();
-    }
-    
     public void completeSession() {
         this.completed = true;
         this.endTime = LocalDateTime.now();

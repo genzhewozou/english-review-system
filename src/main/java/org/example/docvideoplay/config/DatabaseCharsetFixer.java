@@ -39,19 +39,19 @@ public class DatabaseCharsetFixer implements ApplicationRunner {
                 return;
             }
 
-            // Fix highlights table if needed (common cause: latin1 column collation).
-            ensureUtf8mb4ForHighlightsColumns();
+            // Fix cards table if needed (common cause: latin1 column collation).
+            ensureUtf8mb4ForCardsColumns();
         } catch (Exception e) {
             // Don't block app startup if DB user lacks ALTER permissions.
             logger.warn("Database charset fixer skipped due to error: {}", e.getMessage());
         }
     }
 
-    private void ensureUtf8mb4ForHighlightsColumns() {
+    private void ensureUtf8mb4ForCardsColumns() {
         // Check current collation for key text columns.
         List<String> collations = jdbcTemplate.queryForList(
                 "SELECT COLLATION_NAME FROM information_schema.COLUMNS " +
-                        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'highlights' " +
+                        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cards' " +
                         "AND COLUMN_NAME IN ('text','context','user_comment')",
                 String.class
         );
@@ -64,15 +64,15 @@ public class DatabaseCharsetFixer implements ApplicationRunner {
             return;
         }
 
-        logger.info("Fixing MySQL charset/collation for table 'highlights' to utf8mb4");
+        logger.info("Fixing MySQL charset/collation for table 'cards' to utf8mb4");
 
         // Convert whole table to utf8mb4; this updates existing column collations too.
-        jdbcTemplate.execute("ALTER TABLE highlights CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        jdbcTemplate.execute("ALTER TABLE cards CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
         // Ensure specific columns are long enough and explicitly utf8mb4.
-        jdbcTemplate.execute("ALTER TABLE highlights MODIFY text VARCHAR(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL");
-        jdbcTemplate.execute("ALTER TABLE highlights MODIFY context VARCHAR(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL");
-        jdbcTemplate.execute("ALTER TABLE highlights MODIFY user_comment VARCHAR(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL");
+        jdbcTemplate.execute("ALTER TABLE cards MODIFY text VARCHAR(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL");
+        jdbcTemplate.execute("ALTER TABLE cards MODIFY context VARCHAR(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL");
+        jdbcTemplate.execute("ALTER TABLE cards MODIFY user_comment VARCHAR(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL");
     }
 }
 

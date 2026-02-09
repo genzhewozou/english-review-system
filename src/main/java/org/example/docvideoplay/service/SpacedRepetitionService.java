@@ -1,6 +1,6 @@
 package org.example.docvideoplay.service;
 
-import org.example.docvideoplay.entity.Highlight;
+import org.example.docvideoplay.entity.Card;
 import org.example.docvideoplay.enums.AnswerQuality;
 
 import java.time.LocalDate;
@@ -12,37 +12,37 @@ import java.time.LocalDate;
 public interface SpacedRepetitionService {
     
     /**
-     * Calculate the next review date for a highlight based on the answer quality.
+     * Calculate the next review date for a card based on the answer quality.
      * Uses the SM-2 algorithm to determine optimal spacing intervals.
      * 
-     * @param highlight The highlight being reviewed
+     * @param card The card being reviewed
      * @param quality The quality of the user's answer
      * @return The calculated next review date
      */
-    LocalDate calculateNextReviewDate(Highlight highlight, AnswerQuality quality);
+    LocalDate calculateNextReviewDate(Card card, AnswerQuality quality);
     
     /**
-     * Process a review answer and update the highlight's spaced repetition parameters.
+     * Process a review answer and update the card's spaced repetition parameters.
      * This method updates easeFactor, repetitionCount, intervalDays, and nextReviewDate.
      * 
-     * @param highlight The highlight being reviewed
+     * @param card The card being reviewed
      * @param quality The quality of the user's answer
      */
-    void processReviewAnswer(Highlight highlight, AnswerQuality quality);
+    void processReviewAnswer(Card card, AnswerQuality quality);
     
     /**
-     * Schedule the initial 5-day reminder for a newly created highlight.
-     * This is called when a highlight is first created to set up the initial review.
+     * Schedule the initial 5-day reminder for a newly created card.
+     * This is called when a card is first created to set up the initial review.
      * 
-     * @param highlight The newly created highlight
+     * @param card The newly created card
      */
-    void scheduleInitialReminder(Highlight highlight);
+    void scheduleInitialReminder(Card card);
     
     /**
-     * Reset a highlight's spaced repetition parameters to initial values.
+     * Reset a card's spaced repetition parameters to initial values.
      * Useful when a user wants to restart learning a particular item.
      * 
-     * @param highlight The highlight to reset
+     * @param card The card to reset
      */
-    void resetSpacedRepetitionData(Highlight highlight);
+    void resetSpacedRepetitionData(Card card);
 }

@@ -10,6 +10,9 @@ const apiClient = axios.create({
   }
 })
 
+// Log the base URL for debugging
+console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL || '/api')
+
 // Request interceptor for adding auth tokens, logging, etc.
 apiClient.interceptors.request.use(
   config => {
@@ -56,6 +59,9 @@ apiClient.interceptors.response.use(
     } else if (error.response?.status === 403) {
       // Forbidden - show access denied message
       ElMessage.error('Access denied. You do not have permission to perform this action.')
+    } else if (error.response?.status === 404) {
+      // Not found - don't show error message for expected 404s
+      console.warn('API endpoint not found:', error.config?.url)
     } else if (error.response?.status >= 500) {
       // Server error - show generic error message
       ElMessage.error('Server error occurred. Please try again later.')
@@ -63,8 +69,8 @@ apiClient.interceptors.response.use(
       // Timeout error
       ElMessage.error('Request timeout. Please check your connection and try again.')
     } else if (!error.response) {
-      // Network error
-      ElMessage.error('Network error. Please check your connection.')
+      // Network error - don't show error message
+      console.warn('Network error:', error.message)
     }
 
     return Promise.reject(error)

@@ -1,10 +1,10 @@
 <template>
-  <div class="text-highlighter" :class="{ 'highlight-mode': highlightMode }">
-    <!-- Highlighting Toolbar -->
-    <div v-if="highlightMode" class="highlight-toolbar">
+  <div class="text-highlighter" :class="{ 'selection-mode': selectionMode }">
+    <!-- Selection Toolbar -->
+    <div v-if="selectionMode" class="selection-toolbar">
       <el-alert
-        title="Highlighting Mode Active"
-        description="Select any text to create a highlight. Click on existing highlights to view or edit them."
+        title="Selection Mode Active"
+        description="Select any text to create a card. Click on existing cards to view or edit them."
         type="info"
         :closable="false"
         show-icon
@@ -13,10 +13,10 @@
         <el-button 
           type="primary" 
           size="small" 
-          @click="$emit('toggle-highlight-mode')"
+          @click="$emit('toggle-selection-mode')"
           :icon="Edit"
         >
-          Exit Highlighting
+          Exit Selection
         </el-button>
         <el-button 
           type="default" 
@@ -39,7 +39,7 @@
     >
       <div 
         class="text-content"
-        v-html="highlightedContent"
+        v-html="cardContent"
       ></div>
     </div>
 
@@ -49,25 +49,37 @@
       ref="selectionPopup"
       class="selection-popup"
       :style="popupStyle"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="selection-popup-title"
+      aria-describedby="selection-popup-description"
+      tabindex="0"
+      @keydown.esc="closeAllPopups"
+      @keydown.enter="createCard"
+      @keydown.tab="handlePopupTabKey"
     >
       <div class="popup-content">
-        <div class="selected-text-preview">
-          <strong>Selected:</strong> "{{ selectedText.text }}"
+        <div class="selected-text-preview" id="selection-popup-description">
+          <strong id="selection-popup-title">Selected:</strong> "{{ selectedText.text }}"
         </div>
         <div class="popup-actions">
           <el-button 
             type="primary" 
             size="small"
-            @click="createHighlight"
+            @click="createCard"
             :icon="Plus"
+            tabindex="0"
+            aria-label="Create card"
           >
-            Create Highlight
+            Create Card
           </el-button>
           <el-button 
             type="default" 
             size="small"
             @click="closeSelectionPopup"
             :icon="Close"
+            tabindex="0"
+            aria-label="Cancel"
           >
             Cancel
           </el-button>
@@ -75,42 +87,55 @@
       </div>
     </div>
 
-    <!-- Highlight Details Popup -->
+    <!-- Card Details Popup -->
     <div 
-      v-if="showHighlightPopup && selectedHighlight"
-      ref="highlightPopup"
-      class="highlight-popup"
-      :style="highlightPopupStyle"
+      v-if="showCardPopup && selectedCard"
+      ref="cardPopup"
+      class="card-popup"
+      :style="cardPopupStyle"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="card-popup-title"
+      aria-describedby="card-popup-description"
+      tabindex="0"
+      @keydown.esc="closeAllPopups"
+      @keydown.tab="handlePopupTabKey"
     >
       <div class="popup-content">
-        <div class="highlight-text">
-          <strong>Highlight:</strong> "{{ selectedHighlight.text }}"
+        <div class="card-text" id="card-popup-description">
+          <strong id="card-popup-title">Card:</strong> "{{ selectedCard.text }}"
         </div>
-        <div v-if="selectedHighlight.userComment" class="highlight-comment">
-          <strong>Comment:</strong> {{ selectedHighlight.userComment }}
+        <div v-if="selectedCard.userComment" class="card-comment">
+          <strong>Comment:</strong> {{ selectedCard.userComment }}
         </div>
         <div class="popup-actions">
           <el-button 
             type="primary" 
             size="small"
-            @click="editHighlight"
+            @click="editCard"
             :icon="Edit"
+            tabindex="0"
+            aria-label="Edit card"
           >
             Edit
           </el-button>
           <el-button 
             type="warning" 
             size="small"
-            @click="deleteHighlight"
+            @click="deleteCard"
             :icon="Delete"
+            tabindex="0"
+            aria-label="Delete card"
           >
             Delete
           </el-button>
           <el-button 
             type="default" 
             size="small"
-            @click="closeHighlightPopup"
+            @click="closeCardPopup"
             :icon="Close"
+            tabindex="0"
+            aria-label="Close popup"
           >
             Close
           </el-button>
@@ -120,9 +145,11 @@
 
     <!-- Overlay for popup backdrop -->
     <div 
-      v-if="showSelectionPopup || showHighlightPopup"
+      v-if="showSelectionPopup || showCardPopup"
       class="popup-overlay"
       @click="closeAllPopups"
+      aria-hidden="true"
+      role="presentation"
     ></div>
   </div>
 </template>
@@ -145,11 +172,11 @@ export default {
       type: String,
       required: true
     },
-    highlights: {
+    cards: {
       type: Array,
       default: () => []
     },
-    highlightMode: {
+    selectionMode: {
       type: Boolean,
       default: false
     },
@@ -160,43 +187,43 @@ export default {
   },
   emits: [
     'text-selected', 
-    'highlight-created', 
-    'highlight-clicked', 
-    'highlight-edited',
-    'highlight-deleted',
-    'toggle-highlight-mode'
+    'card-created', 
+    'card-clicked', 
+    'card-edited',
+    'card-deleted',
+    'toggle-selection-mode'
   ],
   setup(props, { emit }) {
     // Refs
     const contentContainer = ref(null)
     const selectionPopup = ref(null)
-    const highlightPopup = ref(null)
+    const cardPopup = ref(null)
     
     // State
     const selectedText = ref(null)
-    const selectedHighlight = ref(null)
+    const selectedCard = ref(null)
     const showSelectionPopup = ref(false)
-    const showHighlightPopup = ref(false)
+    const showCardPopup = ref(false)
     const popupPosition = ref({ x: 0, y: 0 })
-    const highlightPopupPosition = ref({ x: 0, y: 0 })
+    const cardPopupPosition = ref({ x: 0, y: 0 })
 
     // Computed properties
-    const highlightedContent = computed(() => {
-      if (!props.content || !props.highlights.length) {
+    const cardContent = computed(() => {
+      if (!props.content || !props.cards.length) {
         return props.content
       }
 
       let content = props.content
-      const sortedHighlights = [...props.highlights].sort((a, b) => b.startPosition - a.startPosition)
+      const sortedCards = [...props.cards].sort((a, b) => b.startPosition - a.startPosition)
 
-      // Apply highlights in reverse order to maintain positions
-      sortedHighlights.forEach(highlight => {
-        const beforeText = content.substring(0, highlight.startPosition)
-        const highlightText = content.substring(highlight.startPosition, highlight.endPosition)
-        const afterText = content.substring(highlight.endPosition)
+      // Apply card markers in reverse order to maintain positions
+      sortedCards.forEach(card => {
+        const beforeText = content.substring(0, card.startPosition)
+        const cardText = content.substring(card.startPosition, card.endPosition)
+        const afterText = content.substring(card.endPosition)
         
-        const highlightHtml = `<span class="highlight-span" data-highlight-id="${highlight.id}" title="${highlight.userComment || ''}">${highlightText}</span>`
-        content = beforeText + highlightHtml + afterText
+        const cardHtml = `<span class="card-span" data-card-id="${card.id}" title="${card.userComment || ''}">${cardText}</span>`
+        content = beforeText + cardHtml + afterText
       })
 
       return content
@@ -207,29 +234,29 @@ export default {
       top: `${popupPosition.value.y}px`
     }))
 
-    const highlightPopupStyle = computed(() => ({
-      left: `${highlightPopupPosition.value.x}px`,
-      top: `${highlightPopupPosition.value.y}px`
+    const cardPopupStyle = computed(() => ({
+      left: `${cardPopupPosition.value.x}px`,
+      top: `${cardPopupPosition.value.y}px`
     }))
 
     // Methods
     const handleTextSelection = async (event) => {
       console.log('TextHighlighter: handleTextSelection called', { 
-        highlightMode: props.highlightMode, 
+        selectionMode: props.selectionMode, 
         eventType: event.type,
         target: event.target 
       })
       
-      if (!props.highlightMode) {
-        console.log('Not in highlight mode, returning')
+      if (!props.selectionMode) {
+        console.log('Not in selection mode, returning')
         return
       }
 
-      // Check if clicked on existing highlight first
+      // Check if clicked on existing card first
       const target = event.target
-      if (target.classList.contains('highlight-span')) {
-        console.log('Clicked on existing highlight')
-        await handleHighlightClick(target, event)
+      if (target.classList.contains('card-span')) {
+        console.log('Clicked on existing card')
+        await handleCardClick(target, event)
         return
       }
 
@@ -289,30 +316,30 @@ export default {
           })
 
           showSelectionPopup.value = true
-          closeHighlightPopup()
+          closeCardPopup()
         } catch (error) {
           console.error('Error handling text selection:', error)
         }
       }, 100) // Small delay like in SimpleTextHighlighter
     }
 
-    const handleHighlightClick = async (element, event) => {
+    const handleCardClick = async (element, event) => {
       event.stopPropagation()
       
-      const highlightId = parseInt(element.dataset.highlightId)
-      const highlight = props.highlights.find(h => h.id === highlightId)
+      const cardId = parseInt(element.dataset.cardId)
+      const card = props.cards.find(c => c.id === cardId)
       
-      if (!highlight) return
+      if (!card) return
 
-      selectedHighlight.value = highlight
+      selectedCard.value = card
       
       const rect = element.getBoundingClientRect()
-      highlightPopupPosition.value = {
+      cardPopupPosition.value = {
         x: rect.left + (rect.width / 2) - 100,
         y: rect.bottom + window.scrollY + 10
       }
 
-      showHighlightPopup.value = true
+      showCardPopup.value = true
       closeSelectionPopup()
     }
 
@@ -390,14 +417,14 @@ export default {
     }
 
     const handleSelectionStart = (event) => {
-      if (!props.highlightMode) {
+      if (!props.selectionMode) {
         event.preventDefault()
         return false
       }
     }
 
-    const createHighlight = () => {
-      console.log('createHighlight called', { selectedText: selectedText.value })
+    const createCard = () => {
+      console.log('createCard called', { selectedText: selectedText.value })
       
       if (!selectedText.value) {
         console.log('No selected text, returning')
@@ -416,20 +443,20 @@ export default {
       clearSelection()
     }
 
-    const editHighlight = () => {
-      if (!selectedHighlight.value) return
+    const editCard = () => {
+      if (!selectedCard.value) return
       
-      emit('highlight-clicked', selectedHighlight.value)
-      closeHighlightPopup()
+      emit('card-clicked', selectedCard.value)
+      closeCardPopup()
     }
 
-    const deleteHighlight = async () => {
-      if (!selectedHighlight.value) return
+    const deleteCard = async () => {
+      if (!selectedCard.value) return
 
       try {
         await ElMessageBox.confirm(
-          'Are you sure you want to delete this highlight?',
-          'Delete Highlight',
+          'Are you sure you want to delete this card?',
+          'Delete Card',
           {
             confirmButtonText: 'Delete',
             cancelButtonText: 'Cancel',
@@ -437,9 +464,9 @@ export default {
           }
         )
 
-        emit('highlight-deleted', selectedHighlight.value)
-        closeHighlightPopup()
-        ElMessage.success('Highlight deleted successfully')
+        emit('card-deleted', selectedCard.value)
+        closeCardPopup()
+        ElMessage.success('Card deleted successfully')
       } catch {
         // User cancelled
       }
@@ -456,23 +483,56 @@ export default {
       selectedText.value = null
     }
 
-    const closeHighlightPopup = () => {
-      showHighlightPopup.value = false
-      selectedHighlight.value = null
+    const closeCardPopup = () => {
+      showCardPopup.value = false
+      selectedCard.value = null
     }
 
     const closeAllPopups = () => {
       closeSelectionPopup()
-      closeHighlightPopup()
+      closeCardPopup()
       clearSelection()
+    }
+
+    const handlePopupTabKey = (event) => {
+      // Get all focusable elements in the current popup
+      const popup = showSelectionPopup.value ? selectionPopup.value : cardPopup.value
+      if (!popup) return
+
+      const focusableElements = popup.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+      const focusable = Array.from(focusableElements).filter(el => {
+        return !el.disabled && el.offsetWidth > 0 && el.offsetHeight > 0
+      })
+
+      if (focusable.length === 0) return
+
+      const firstFocusable = focusable[0]
+      const lastFocusable = focusable[focusable.length - 1]
+
+      // Trap tab key within popup
+      if (event.key === 'Tab') {
+        if (event.shiftKey) {
+          // Shift + Tab
+          if (document.activeElement === firstFocusable) {
+            event.preventDefault()
+            lastFocusable.focus()
+          }
+        } else {
+          // Tab
+          if (document.activeElement === lastFocusable) {
+            event.preventDefault()
+            firstFocusable.focus()
+          }
+        }
+      }
     }
 
     const handleClickOutside = (event) => {
       if (showSelectionPopup.value && selectionPopup.value && !selectionPopup.value.contains(event.target)) {
         closeSelectionPopup()
       }
-      if (showHighlightPopup.value && highlightPopup.value && !highlightPopup.value.contains(event.target)) {
-        closeHighlightPopup()
+      if (showCardPopup.value && cardPopup.value && !cardPopup.value.contains(event.target)) {
+        closeCardPopup()
       }
     }
 
@@ -484,11 +544,13 @@ export default {
 
     // Lifecycle
     onMounted(() => {
-      document.addEventListener('click', handleClickOutside)
-      document.addEventListener('keydown', handleKeyDown)
+      // Use passive event listeners where appropriate
+      document.addEventListener('click', handleClickOutside, { passive: true })
+      document.addEventListener('keydown', handleKeyDown, { passive: true })
     })
 
     onUnmounted(() => {
+      // Clean up event listeners
       document.removeEventListener('click', handleClickOutside)
       document.removeEventListener('keydown', handleKeyDown)
     })
@@ -498,8 +560,8 @@ export default {
       closeAllPopups()
     })
 
-    // Watch for highlight mode changes
-    watch(() => props.highlightMode, (newMode) => {
+    // Watch for selection mode changes
+    watch(() => props.selectionMode, (newMode) => {
       if (!newMode) {
         closeAllPopups()
       }
@@ -508,23 +570,23 @@ export default {
     return {
       contentContainer,
       selectionPopup,
-      highlightPopup,
+      cardPopup,
       selectedText,
-      selectedHighlight,
+      selectedCard,
       showSelectionPopup,
-      showHighlightPopup,
-      highlightedContent,
+      showCardPopup,
+      cardContent,
       popupStyle,
-      highlightPopupStyle,
+      cardPopupStyle,
       handleTextSelection,
       handleSelectionStart,
       handleClick,
-      createHighlight,
-      editHighlight,
-      deleteHighlight,
+      createCard,
+      editCard,
+      deleteCard,
       clearSelection,
       closeSelectionPopup,
-      closeHighlightPopup,
+      closeCardPopup,
       closeAllPopups
     }
   }
@@ -537,7 +599,7 @@ export default {
   width: 100%;
 }
 
-.highlight-toolbar {
+.card-toolbar {
   margin-bottom: 1rem;
   padding: 1rem;
   background-color: #f0f9ff;
@@ -563,7 +625,7 @@ export default {
   color: #303133;
 }
 
-.highlight-mode .content-container {
+.selection-mode .content-container {
   cursor: text;
   user-select: text;
   border-color: #409eff;
@@ -575,8 +637,8 @@ export default {
   word-wrap: break-word;
 }
 
-/* Highlight styling */
-:deep(.highlight-span) {
+/* Card styling */
+:deep(.card-span) {
   background-color: #fff3cd;
   border-bottom: 2px solid #ffc107;
   padding: 2px 4px;
@@ -586,13 +648,13 @@ export default {
   position: relative;
 }
 
-:deep(.highlight-span:hover) {
+:deep(.card-span:hover) {
   background-color: #fff8e1;
   border-bottom-color: #ff9800;
   box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
 }
 
-:deep(.highlight-span[title]:hover::after) {
+:deep(.card-span[title]:hover::after) {
   content: attr(title);
   position: absolute;
   bottom: 100%;
@@ -613,13 +675,13 @@ export default {
 
 /* Popup styling */
 .selection-popup,
-.highlight-popup {
+.card-popup {
   position: fixed;
-  z-index: 1000;
+  z-index: var(--z-popover);
   background: white;
   border: 1px solid #ebeef5;
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
   min-width: 200px;
   max-width: 300px;
 }
@@ -629,14 +691,14 @@ export default {
 }
 
 .selected-text-preview,
-.highlight-text {
+.card-text {
   margin-bottom: 0.75rem;
   font-size: 0.9rem;
   color: #303133;
   word-wrap: break-word;
 }
 
-.highlight-comment {
+.card-comment {
   margin-bottom: 0.75rem;
   font-size: 0.85rem;
   color: #606266;
@@ -660,7 +722,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 999;
+  z-index: var(--z-modal-backdrop);
   background: transparent;
 }
 
@@ -685,7 +747,7 @@ export default {
   }
   
   .selection-popup,
-  .highlight-popup {
+  .card-popup {
     min-width: 250px;
     max-width: 90vw;
   }
@@ -701,13 +763,13 @@ export default {
 
 /* Print styles */
 @media print {
-  .highlight-toolbar,
+  .card-toolbar,
   .selection-popup,
-  .highlight-popup {
+  .card-popup {
     display: none !important;
   }
   
-  :deep(.highlight-span) {
+  :deep(.card-span) {
     background-color: #f0f0f0 !important;
     border-bottom: 1px solid #666 !important;
   }

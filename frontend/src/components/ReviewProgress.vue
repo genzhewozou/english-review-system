@@ -112,8 +112,9 @@ export default {
   emits: ['pause-session', 'end-session'],
   setup(props) {
     const progressPercentage = computed(() => {
-      if (props.totalQuestions === 0) return 0
-      return (props.currentQuestion / props.totalQuestions) * 100
+      const total = props.totalQuestions || 0
+      if (total === 0) return 0
+      return (props.currentQuestion / total) * 100
     })
 
     const accuracy = computed(() => {
@@ -132,16 +133,19 @@ export default {
     })
 
     const estimatedTimeRemaining = computed(() => {
-      const remaining = props.totalQuestions - props.currentQuestion
+      const total = props.totalQuestions || 0
+      const remaining = total - props.currentQuestion
       return remaining * averageTimePerQuestion.value
     })
 
     const progressMarkers = computed(() => {
       const markers = []
+      const total = props.totalQuestions || 0
       
       // Add markers for answered questions
       props.answerHistory.forEach((answer, index) => {
-        const position = ((index + 1) / props.totalQuestions) * 100
+        if (total === 0) return
+        const position = ((index + 1) / total) * 100
         const isCorrect = answer.quality === 'PERFECT' || answer.quality === 'CORRECT'
         
         markers.push({

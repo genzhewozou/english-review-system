@@ -13,8 +13,9 @@ public class TodoItemResultDto {
     private LocalDate dueDate;
     private Boolean completed;
     private TodoType type;
-    private Long relatedHighlightId;
-    private String relatedHighlightText;
+    private Long relatedCardId;
+    private String relatedCardText;
+    private Long relatedSessionId;
     private Boolean overdue;
     private Boolean dueToday;
     private LocalDateTime createdDate;
@@ -24,8 +25,7 @@ public class TodoItemResultDto {
     public TodoItemResultDto() {}
     
     public TodoItemResultDto(Long id, String title, String description, LocalDate dueDate,
-                            Boolean completed, TodoType type, Long relatedHighlightId,
-                            String relatedHighlightText, Boolean overdue, Boolean dueToday,
+                            Boolean completed, TodoType type, Long relatedCardId, String relatedCardText, Long relatedSessionId, Boolean overdue, Boolean dueToday,
                             LocalDateTime createdDate, LocalDateTime updatedDate) {
         this.id = id;
         this.title = title;
@@ -33,8 +33,9 @@ public class TodoItemResultDto {
         this.dueDate = dueDate;
         this.completed = completed;
         this.type = type;
-        this.relatedHighlightId = relatedHighlightId;
-        this.relatedHighlightText = relatedHighlightText;
+        this.relatedCardId = relatedCardId;
+        this.relatedCardText = relatedCardText;
+        this.relatedSessionId = relatedSessionId;
         this.overdue = overdue;
         this.dueToday = dueToday;
         this.createdDate = createdDate;
@@ -90,20 +91,28 @@ public class TodoItemResultDto {
         this.type = type;
     }
     
-    public Long getRelatedHighlightId() {
-        return relatedHighlightId;
+    public Long getRelatedSessionId() {
+        return relatedSessionId;
     }
     
-    public void setRelatedHighlightId(Long relatedHighlightId) {
-        this.relatedHighlightId = relatedHighlightId;
+    public void setRelatedSessionId(Long relatedSessionId) {
+        this.relatedSessionId = relatedSessionId;
     }
     
-    public String getRelatedHighlightText() {
-        return relatedHighlightText;
+    public Long getRelatedCardId() {
+        return relatedCardId;
     }
     
-    public void setRelatedHighlightText(String relatedHighlightText) {
-        this.relatedHighlightText = relatedHighlightText;
+    public void setRelatedCardId(Long relatedCardId) {
+        this.relatedCardId = relatedCardId;
+    }
+    
+    public String getRelatedCardText() {
+        return relatedCardText;
+    }
+    
+    public void setRelatedCardText(String relatedCardText) {
+        this.relatedCardText = relatedCardText;
     }
     
     public Boolean getOverdue() {

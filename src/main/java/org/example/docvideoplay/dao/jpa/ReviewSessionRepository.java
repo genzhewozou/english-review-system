@@ -51,12 +51,11 @@ public interface ReviewSessionRepository extends JpaRepository<ReviewSession, Lo
     List<ReviewSession> findSessionsStartedToday();
     
     /**
-     * Find review sessions with review records eagerly loaded
+     * Find review sessions by completion status
      * @param completed whether to find completed or incomplete sessions
-     * @return list of review sessions with review records loaded
+     * @return list of review sessions
      */
-    @Query("SELECT DISTINCT rs FROM ReviewSession rs LEFT JOIN FETCH rs.reviewRecords WHERE rs.completed = :completed ORDER BY rs.startTime DESC")
-    List<ReviewSession> findByCompletedWithReviewRecords(@Param("completed") Boolean completed);
+    List<ReviewSession> findByCompletedOrderByStartTimeDesc(Boolean completed);
     
     /**
      * Count review sessions by completion status
@@ -89,4 +88,19 @@ public interface ReviewSessionRepository extends JpaRepository<ReviewSession, Lo
      */
     @Query("SELECT rs FROM ReviewSession rs WHERE rs.startTime >= :startDate AND rs.startTime <= :endDate ORDER BY rs.startTime DESC")
     List<ReviewSession> findSessionsInDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+    
+    // User-based queries
+    List<ReviewSession> findByUserIdOrderByStartTimeDesc(Long userId);
+    List<ReviewSession> findByUserIdAndCompletedFalseOrderByStartTimeDesc(Long userId);
+    List<ReviewSession> findByUserIdAndCompletedTrueOrderByStartTimeDesc(Long userId);
+    List<ReviewSession> findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(Long userId, LocalDateTime startTime, LocalDateTime endTime);
+    @Query("SELECT rs FROM ReviewSession rs WHERE rs.userId = :userId AND DATE(rs.startTime) = CURRENT_DATE ORDER BY rs.startTime DESC")
+    List<ReviewSession> findSessionsStartedTodayByUserId(@Param("userId") Long userId);
+    long countByUserIdAndCompleted(Long userId, Boolean completed);
+    @Query("SELECT AVG(rs.correctAnswers * 100.0 / rs.totalQuestions) FROM ReviewSession rs WHERE rs.userId = :userId AND rs.completed = true AND rs.totalQuestions > 0")
+    Double getAverageAccuracyByUserId(@Param("userId") Long userId);
+    @Query("SELECT rs FROM ReviewSession rs WHERE rs.userId = :userId AND rs.completed = true AND rs.totalQuestions >= :minTotalQuestions AND (rs.correctAnswers * 100.0 / rs.totalQuestions) >= :minAccuracy ORDER BY rs.startTime DESC")
+    List<ReviewSession> findSessionsWithMinimumAccuracyByUserId(@Param("userId") Long userId, @Param("minAccuracy") Double minAccuracy, @Param("minTotalQuestions") Integer minTotalQuestions);
+    @Query("SELECT rs FROM ReviewSession rs WHERE rs.userId = :userId AND rs.startTime >= :startDate AND rs.startTime <= :endDate ORDER BY rs.startTime DESC")
+    List<ReviewSession> findSessionsInDateRangeByUserId(@Param("userId") Long userId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 }
