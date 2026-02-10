@@ -45,19 +45,20 @@ public interface VocabularyService {
     /**
      * Create a new card from highlighted text with an initial comment and tags.
      * 
-     * @param userId The ID of the user creating the card
-     * @param materialId The ID of the study material
+     * @param userId The ID of user creating card
+     * @param materialId The ID of study material
      * @param text The card front text
+     * @param backText The card back text (translation/definition)
      * @param context The surrounding context
-     * @param startPosition The start position in the text
-     * @param endPosition The end position in the text
-     * @param userComment The initial comment for the card
-     * @param tags The list of tag IDs to associate with the card
+     * @param startPosition The start position in text
+     * @param endPosition The end position in text
+     * @param userComment The initial comment for card
+     * @param tags The list of tags to associate with card (can be IDs or names)
      * @return The created Card entity
      * @throws IllegalArgumentException if material not found or invalid parameters
      */
-    Card createCardFromHighlightWithCommentAndTags(Long userId, Long materialId, String text, String context,
-                                               Integer startPosition, Integer endPosition, String userComment, List<Long> tags);
+    Card createCardFromHighlightWithCommentAndTags(Long userId, Long materialId, String text, String backText, String context,
+                                               Integer startPosition, Integer endPosition, String userComment, List<Object> tags);
     
     /**
      * Retrieve all cards for a specific study material ordered by position.
@@ -268,4 +269,15 @@ public interface VocabularyService {
      * @return true if positions are valid, false otherwise
      */
     boolean isValidPosition(Integer startPosition, Integer endPosition);
+    
+    /**
+     * Update the tags for an existing card.
+     * 
+     * @param cardId The ID of the card
+     * @param tags The list of tags to associate with the card
+     * @param userId The ID of the user who owns the card
+     * @return The updated Card entity
+     * @throws IllegalArgumentException if card not found or not owned by user
+     */
+    Card updateCardTags(Long cardId, List<Object> tags, Long userId);
 }

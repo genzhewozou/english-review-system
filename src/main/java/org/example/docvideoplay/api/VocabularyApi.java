@@ -20,10 +20,10 @@ public interface VocabularyApi {
      * Create a new card
      *
      * @param params Card parameters (materialId, text, context, positions, comment)
-     * @return ResponseEntity containing the created card details
+     * @return ResponseEntity containing the created card details or error message
      */
     @PostMapping("/cards")
-    ResponseEntity<CardResultDto> createCard(@Valid @RequestBody CardParamsDto params);
+    ResponseEntity<?> createCard(@Valid @RequestBody CardParamsDto params);
 
     /**
      * Get all cards for a specific material

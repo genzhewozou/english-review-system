@@ -8,13 +8,6 @@
       @submit.prevent="handleSubmit"
       class="modern-form"
     >
-      <!-- Header -->
-      <div class="form-header">
-        <h3 class="form-title">{{ isEditing ? 'Edit Card' : 'Create Card' }}</h3>
-        <div class="form-close" @click="$emit('cancel')" aria-label="Close">
-          <span class="close-icon">×</span>
-        </div>
-      </div>
 
       <!-- Selected Text Display -->
       <div v-if="selectedText" class="selected-text-section">
@@ -31,6 +24,34 @@
           {{ context }}
         </div>
       </div>
+
+      <!-- Back Text Input (Translation/Definition) -->
+      <el-form-item label="Back Text" prop="backText">
+        <el-input
+          v-model="formData.backText"
+          type="textarea"
+          :rows="3"
+          placeholder="Enter translation, definition, or explanation..."
+          maxlength="1000"
+          show-word-limit
+          class="back-text-textarea"
+          resize="vertical"
+        />
+      </el-form-item>
+
+      <!-- Context Input (Optional) -->
+      <el-form-item label="Context" prop="context">
+        <el-input
+          v-model="formData.context"
+          type="textarea"
+          :rows="2"
+          placeholder="Enter surrounding context (optional)..."
+          maxlength="500"
+          show-word-limit
+          class="context-textarea"
+          resize="vertical"
+        />
+      </el-form-item>
 
       <!-- Comment Input with Rich Features -->
       <el-form-item label="Comment" prop="comment">
@@ -141,6 +162,10 @@ export default {
     materialId: {
       type: [String, Number],
       required: true
+    },
+    tags: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['save', 'cancel'],
@@ -149,6 +174,8 @@ export default {
     const saving = ref(false)
     
     const formData = ref({
+      backText: '',
+      context: '',
       comment: '',
       tags: [],
       difficulty: 'medium',
@@ -161,16 +188,7 @@ export default {
       { value: 'hard', label: 'Hard' }
     ])
 
-    const suggestedTags = ref([
-      'vocabulary',
-      'grammar',
-      'idiom',
-      'phrase',
-      'difficult',
-      'important',
-      'review',
-      'pronunciation'
-    ])
+    const suggestedTags = ref(props.tags)
 
     const commentTemplates = ref([
       { id: 1, name: 'Definition', template: 'Definition: ' },
@@ -182,6 +200,18 @@ export default {
     ])
 
     const formRules = {
+      backText: [
+        {
+          required: true,
+          message: 'Back text is required',
+          trigger: 'blur'
+        },
+        {
+          max: 1000,
+          message: 'Back text cannot exceed 1000 characters',
+          trigger: 'blur'
+        }
+      ],
       comment: [
         {
           max: 1000,
@@ -201,14 +231,18 @@ export default {
       if (props.card) {
         // Editing existing card
         formData.value = {
+          backText: props.card.backText || '',
+          context: props.card.context || '',
           comment: props.card.userComment || '',
-          tags: props.card.tags || [],
+          tags: [],
           difficulty: props.card.difficulty || 'medium',
           enableReview: props.card.enableReview !== false
         }
       } else {
         // Creating new card
         formData.value = {
+          backText: '',
+          context: props.context || '',
           comment: '',
           tags: [],
           difficulty: 'medium',
@@ -227,6 +261,8 @@ export default {
         saving.value = true
 
         const highlightData = {
+          backText: formData.value.backText.trim(),
+          context: formData.value.context.trim(),
           comment: formData.value.comment.trim(),
           tags: formData.value.tags,
           difficulty: formData.value.difficulty,

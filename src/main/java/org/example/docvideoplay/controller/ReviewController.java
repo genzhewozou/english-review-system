@@ -202,6 +202,7 @@ public class ReviewController implements ReviewApi {
             QuestionResultDto result = new QuestionResultDto(
                     nextCard.getId(),
                     nextCard.getText(),
+                    nextCard.getBackText(),
                     nextCard.getContext(),
                     nextCard.getUserComment(),
                     answeredQuestions + 1, // Current question number (1-based)
@@ -239,6 +240,7 @@ public class ReviewController implements ReviewApi {
                 results.add(new QuestionResultDto(
                         c.getId(),
                         c.getText(),
+                        c.getBackText(),
                         c.getContext(),
                         c.getUserComment(),
                         i + 1,

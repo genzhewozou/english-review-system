@@ -80,6 +80,7 @@ public class CardController {
                     currentUserId,
                     params.getMaterialId(),
                     params.getText(),
+                    params.getBackText(),
                     params.getContext(),
                     params.getStartPosition(),
                     params.getEndPosition(),
@@ -390,6 +391,7 @@ public class CardController {
     public static class CardFromHighlightParamsDto {
         private Long materialId;
         private String text;
+        private String backText;
         private String context;
         private Integer startPosition;
         private Integer endPosition;
@@ -401,6 +403,8 @@ public class CardController {
         public void setMaterialId(Long materialId) { this.materialId = materialId; }
         public String getText() { return text; }
         public void setText(String text) { this.text = text; }
+        public String getBackText() { return backText; }
+        public void setBackText(String backText) { this.backText = backText; }
         public String getContext() { return context; }
         public void setContext(String context) { this.context = context; }
         public Integer getStartPosition() { return startPosition; }

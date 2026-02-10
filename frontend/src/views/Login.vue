@@ -88,8 +88,9 @@ export default {
         }
         
         if (response.ok) {
-          // Store user info in localStorage
+          // Store user info and token in localStorage
           localStorage.setItem('user', JSON.stringify(data));
+          localStorage.setItem('authToken', data.token);
           localStorage.setItem('isAuthenticated', 'true');
           // Redirect to dashboard
           this.$router.push('/');

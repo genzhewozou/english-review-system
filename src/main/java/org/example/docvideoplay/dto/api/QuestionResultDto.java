@@ -4,6 +4,7 @@ public class QuestionResultDto {
     
     private Long cardId;
     private String text;
+    private String backText;
     private String context;
     private String userComment;
     private Integer questionNumber;
@@ -12,10 +13,11 @@ public class QuestionResultDto {
     // Constructors
     public QuestionResultDto() {}
     
-    public QuestionResultDto(Long cardId, String text, String context, String userComment,
+    public QuestionResultDto(Long cardId, String text, String backText, String context, String userComment,
                             Integer questionNumber, Integer totalQuestions) {
         this.cardId = cardId;
         this.text = text;
+        this.backText = backText;
         this.context = context;
         this.userComment = userComment;
         this.questionNumber = questionNumber;
@@ -37,6 +39,14 @@ public class QuestionResultDto {
     
     public void setText(String text) {
         this.text = text;
+    }
+    
+    public String getBackText() {
+        return backText;
+    }
+    
+    public void setBackText(String backText) {
+        this.backText = backText;
     }
     
     public String getContext() {

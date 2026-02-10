@@ -6,35 +6,38 @@ import java.util.List;
 
 public class CardParamsDto {
     
-    @NotNull(message = "Material ID is required")
     private Long materialId;
    
     @NotBlank(message = "Text is required")
     private String text;
     
+    private String backText;
+    
     private String context;
     private Integer startPosition;
     private Integer endPosition;
     private String userComment;
-    private List<Long> tags;
+    private List<Object> tags;
     
     // Constructors
     public CardParamsDto() {}
     
-    public CardParamsDto(Long materialId, String text, String context, 
+    public CardParamsDto(Long materialId, String text, String backText, String context, 
                           Integer startPosition, Integer endPosition, String userComment) {
         this.materialId = materialId;
         this.text = text;
+        this.backText = backText;
         this.context = context;
         this.startPosition = startPosition;
         this.endPosition = endPosition;
         this.userComment = userComment;
     }
     
-    public CardParamsDto(Long materialId, String text, String context, 
-                          Integer startPosition, Integer endPosition, String userComment, List<Long> tags) {
+    public CardParamsDto(Long materialId, String text, String backText, String context, 
+                          Integer startPosition, Integer endPosition, String userComment, List<Object> tags) {
         this.materialId = materialId;
         this.text = text;
+        this.backText = backText;
         this.context = context;
         this.startPosition = startPosition;
         this.endPosition = endPosition;
@@ -57,6 +60,14 @@ public class CardParamsDto {
     
     public void setText(String text) {
         this.text = text;
+    }
+    
+    public String getBackText() {
+        return backText;
+    }
+    
+    public void setBackText(String backText) {
+        this.backText = backText;
     }
     
     public String getContext() {
@@ -91,11 +102,11 @@ public class CardParamsDto {
         this.userComment = userComment;
     }
     
-    public List<Long> getTags() {
+    public List<Object> getTags() {
         return tags;
     }
     
-    public void setTags(List<Long> tags) {
+    public void setTags(List<Object> tags) {
         this.tags = tags;
     }
 }

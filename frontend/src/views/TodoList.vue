@@ -69,6 +69,7 @@
               type="checkbox" 
               :checked="todo.completed" 
               @change.stop="toggleTodo(todo.id)"
+              @click.stop
               class="todo-checkbox"
             >
             <h4 :class="{ 'completed': todo.completed, 'clickable': todo.type === 'REVIEW_SESSION' }">{{ todo.title }}</h4>
@@ -268,7 +269,7 @@ export default {
       }
     }
     
-    const handleTodoClick = (todo) => {
+    const handleTodoClick = async (todo) => {
       if (todo.type === 'REVIEW_SESSION') {
         console.log('Todo clicked:', todo);
         // Navigate directly to the specific review session if relatedSessionId is available
@@ -281,12 +282,27 @@ export default {
           console.log('Navigating to review with highlight:', todo.relatedHighlight.id);
           router.push({
             path: '/review',
-            query: { highlightId: todo.relatedHighlight.id }
+            query: { cardId: todo.relatedHighlight.id }
+          })
+        } else if (todo.relatedHighlightId) {
+          console.log('Navigating to review with relatedHighlightId:', todo.relatedHighlightId);
+          router.push({
+            path: '/review',
+            query: { cardId: todo.relatedHighlightId }
           })
         } else {
-          console.log('Navigating to review page');
-          // Navigate to review page without specific highlight
-          router.push('/review')
+          console.log('Creating new review session');
+          // Create a new review session and navigate to it
+          try {
+            const response = await apiService.post('/reviews/sessions')
+            const session = response.data
+            console.log('Navigating to new review session:', session.id);
+            router.push(`/review/${session.id}`)
+          } catch (error) {
+            console.error('Error creating review session:', error);
+            // If error, navigate to review page
+            router.push('/review')
+          }
         }
       }
     }

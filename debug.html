@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug API Request</title>
+    <script>
+        async function testApi() {
+            const url = 'http://localhost:3000/api/reviews/sessions/58/answers';
+            const data = {
+                cardId: 1,
+                quality: 'BLACKOUT'
+            };
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                try {
+                    const responseData = await response.json();
+                    console.log('Response data:', responseData);
+                } catch (e) {
+                    console.log('Response is not JSON:', e.message);
+                }
+                
+                document.getElementById('result').innerHTML = `Status: ${response.status}<br>OK: ${response.ok}`;
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Test API Request</h1>
+    <button onclick="testApi()">Test POST Request</button>
+    <div id="result"></div>
+</body>
+</html>

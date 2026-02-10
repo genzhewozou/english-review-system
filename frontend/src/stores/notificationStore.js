@@ -46,7 +46,32 @@ export const useNotificationStore = defineStore('notification', () => {
     } catch (error) {
       console.error('Error loading notifications:', error)
       // For development, create some mock notifications
-      notifications.value = []
+      notifications.value = [
+        {
+          id: 1,
+          type: 'due',
+          title: '6 Tasks Due Today',
+          message: 'You have 6 tasks due today',
+          read: false,
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 2,
+          type: 'overdue',
+          title: '2 Overdue Tasks',
+          message: 'You have 2 tasks that are overdue',
+          read: false,
+          createdAt: new Date(Date.now() - 3600000).toISOString()
+        },
+        {
+          id: 3,
+          type: 'review',
+          title: 'Review Available',
+          message: 'You have 10 cards ready for review',
+          read: true,
+          createdAt: new Date(Date.now() - 7200000).toISOString()
+        }
+      ]
     } finally {
       loading.value = false
     }

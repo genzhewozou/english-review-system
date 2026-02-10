@@ -625,6 +625,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDeckService } from '../services/deckService'
+import { useApiService } from '../composables/useApiService'
+import { useNotification } from '../composables/useNotification'
 
 export default {
   name: 'Decks',
@@ -636,8 +638,12 @@ export default {
       updateDeck, 
       deleteDeck: deleteDeckApi, 
       getPublicDecks,
-      duplicateDeck: duplicateDeckApi
+      duplicateDeck: duplicateDeckApi,
+      addCardToDeck: addCardToDeckApi
     } = useDeckService()
+    
+    const { apiService } = useApiService()
+    const { showSuccess, showError } = useNotification()
     
     const decks = ref([])
     const publicDecks = ref([])
@@ -683,7 +689,7 @@ export default {
         decks.value = await getAllDecks()
       } catch (error) {
         console.error('Failed to load decks:', error)
-        alert('Failed to load decks. Please try again.')
+        showError('Failed to load decks. Please try again.')
       } finally {
         loading.value = false
       }
@@ -698,6 +704,19 @@ export default {
         publicDecks.value = []
       } finally {
         loadingPublic.value = false
+      }
+    }
+    
+    const loadCards = async () => {
+      loadingCards.value = true
+      try {
+        const response = await apiService.get('/vocabulary')
+        availableCards.value = response.data || []
+      } catch (error) {
+        console.error('Error loading cards:', error)
+        availableCards.value = []
+      } finally {
+        loadingCards.value = false
       }
     }
     
@@ -733,16 +752,17 @@ export default {
       try {
         if (showEditModal.value && selectedDeck.value) {
           await updateDeck(selectedDeck.value.id, deckForm.value)
-          alert('Deck updated successfully!')
+          showSuccess('Deck updated successfully!')
         } else {
           await createDeck(deckForm.value)
-          alert('Deck created successfully!')
+          showSuccess('Deck created successfully!')
         }
         await loadDecks()
+        await loadPublicDecks()
         closeModal()
       } catch (error) {
         console.error('Failed to save deck:', error)
-        alert('Failed to save deck. Please try again.')
+        showError('Failed to save deck. Please try again.')
       } finally {
         saving.value = false
       }
@@ -754,12 +774,13 @@ export default {
       deleting.value = true
       try {
         await deleteDeckApi(selectedDeck.value.id)
-        alert('Deck deleted successfully!')
+        showSuccess('Deck deleted successfully!')
         await loadDecks()
+        await loadPublicDecks()
         closeDeleteModal()
       } catch (error) {
         console.error('Failed to delete deck:', error)
-        alert('Failed to delete deck. Please try again.')
+        showError('Failed to delete deck. Please try again.')
       } finally {
         deleting.value = false
       }
@@ -854,24 +875,30 @@ export default {
           ...deckForm.value,
           ...deckOptions.value
         })
-        alert('Deck options updated successfully!')
+        showSuccess('Deck options updated successfully!')
         await loadDecks()
         closeOptionsModal()
       } catch (error) {
         console.error('Failed to save deck options:', error)
-        alert('Failed to save deck options. Please try again.')
+        showError('Failed to save deck options. Please try again.')
       } finally {
         saving.value = false
       }
     }
     
-    const addCardToDeck = (deck) => {
+    const addCardToDeck = async (deck) => {
       selectedDeck.value = deck
       addCardForm.value = {
         cardId: ''
       }
       addCardErrors.value = {}
       showAddCardModal.value = true
+      
+      try {
+        await loadCards()
+      } catch (error) {
+        console.error('Error loading cards:', error)
+      }
       
       setTimeout(() => {
         if (addCardModalRef.value) {
@@ -903,12 +930,12 @@ export default {
       
       saving.value = true
       try {
-        // Add card to deck logic
-        alert('Card added to deck successfully!')
+        await addCardToDeckApi(selectedDeck.value.id, parseInt(addCardForm.value.cardId))
+        showSuccess('Card added to deck successfully!')
         closeAddCardModal()
       } catch (error) {
         console.error('Failed to add card to deck:', error)
-        alert('Failed to add card to deck. Please try again.')
+        showError('Failed to add card to deck. Please try again.')
       } finally {
         saving.value = false
       }
@@ -925,30 +952,32 @@ export default {
     const duplicateDeck = async (deck) => {
       try {
         await duplicateDeckApi(deck.id)
-        alert('Deck duplicated successfully!')
+        showSuccess('Deck duplicated successfully!')
         await loadDecks()
+        await loadPublicDecks()
       } catch (error) {
         console.error('Failed to duplicate deck:', error)
-        alert('Failed to duplicate deck. Please try again.')
+        showError('Failed to duplicate deck. Please try again.')
       }
     }
     
     const exportDeck = (deck) => {
       // Export deck logic
-      alert('Deck exported successfully!')
+      showSuccess('Deck exported successfully!')
     }
     
     const exportAllDecks = () => {
       // Export all decks logic
-      alert('All decks exported successfully!')
+      showSuccess('All decks exported successfully!')
     }
     
     const importDecks = (event) => {
       const file = event.target.files[0]
       if (file) {
         // Import decks logic
-        alert('Decks imported successfully!')
+        showSuccess('Decks imported successfully!')
         loadDecks()
+        loadPublicDecks()
       }
     }
     
@@ -963,11 +992,12 @@ export default {
     const duplicatePublicDeck = async (deck) => {
       try {
         await duplicateDeckApi(deck.id)
-        alert('Public deck copied successfully!')
+        showSuccess('Public deck copied successfully!')
         await loadDecks()
+        await loadPublicDecks()
       } catch (error) {
         console.error('Failed to copy public deck:', error)
-        alert('Failed to copy public deck. Please try again.')
+        showError('Failed to copy public deck. Please try again.')
       }
     }
     

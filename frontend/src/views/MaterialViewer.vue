@@ -165,6 +165,7 @@
               :selected-text="selectedText"
               :context="selectedContext"
               :material-id="material.id"
+              :tags="tags.map(tag => tag.name)"
               @save="handleCardSave"
               @cancel="resetCardDialog"
             />
@@ -183,6 +184,7 @@
             <CardForm
               :card="editingCard"
               :material-id="material.id"
+              :tags="tags.map(tag => tag.name)"
               @save="handleCardUpdate"
               @cancel="resetEditDialog"
             />
@@ -230,6 +232,7 @@ export default {
     const selectedContext = ref('')
     const selectedTextPosition = ref({ startPosition: 0, endPosition: 0 })
     const editingCard = ref(null)
+    const tags = ref([])
     
     const { apiService } = useApiService()
     const { showSuccess, showError } = useNotification()
@@ -275,6 +278,9 @@ export default {
         // Load cards for this material
         await loadCards(materialId)
         
+        // Load tags for the user
+        await loadTags()
+        
         // Check if we should start in selection mode
         if (route.query.mode === 'selection' || route.query.mode === 'highlight') {
           isSelectionMode.value = true
@@ -295,6 +301,16 @@ export default {
       } catch (error) {
         console.error('Error loading cards:', error)
         cards.value = []
+      }
+    }
+    
+    const loadTags = async () => {
+      try {
+        const response = await apiService.get('/tags')
+        tags.value = response.data || []
+      } catch (error) {
+        console.error('Error loading tags:', error)
+        tags.value = []
       }
     }
     
@@ -360,10 +376,12 @@ export default {
         const response = await apiService.post('/vocabulary/cards', {
           materialId: material.value.id,
           text: selectedText.value,
-          context: selectedContext.value,
+          backText: cardData.backText,
+          context: cardData.context,
           startPosition: selectedTextPosition.value.startPosition,
           endPosition: selectedTextPosition.value.endPosition,
-          userComment: cardData.comment
+          userComment: cardData.comment,
+          tags: cardData.tags
         })
         
         cards.value.push(response.data)
@@ -378,7 +396,10 @@ export default {
     const handleCardUpdate = async (cardData) => {
       try {
         const response = await apiService.put(`/vocabulary/cards/${editingCard.value.id}`, {
-          userComment: cardData.comment
+          backText: cardData.backText,
+          context: cardData.context,
+          userComment: cardData.comment,
+          tags: cardData.tags
         })
         
         const index = cards.value.findIndex(c => c.id === editingCard.value.id)
@@ -464,6 +485,7 @@ export default {
     return {
       material,
       cards,
+      tags,
       loading,
       isSelectionMode,
       showCardDialog,
@@ -476,6 +498,7 @@ export default {
       formatMaterialType,
       loadMaterial,
       loadCards,
+      loadTags,
       downloadMaterial,
       toggleSelectionMode,
       handleTextSelection,

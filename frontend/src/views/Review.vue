@@ -345,7 +345,7 @@ export default {
     
     const { apiService } = useApiService()
     const { getAllMaterials } = useMaterialService()
-    const { getCardsByMaterial, getAllCards } = useVocabularyService()
+    const { getCardsByMaterial, getAllCards, getCardsDueForReview } = useVocabularyService()
     const { getAllDecks } = useDeckService()
     
     const loadReviewData = async () => {
@@ -363,10 +363,13 @@ export default {
         const decksData = await getAllDecks()
         userDecks.value = decksData
 
-        // For now, just set pending reviews to total cards to enable the button
-        pendingReviews.value = totalCards.value
+        // Get cards due for review (using spaced repetition algorithm)
+        const dueCards = await getCardsDueForReview()
+        pendingReviews.value = dueCards.length
       } catch (error) {
         console.error('Error loading review data:', error)
+        // Fallback to total cards if there's an error
+        pendingReviews.value = totalCards.value
       }
     }
     

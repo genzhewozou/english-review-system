@@ -1,13 +1,11 @@
 package org.example.docvideoplay.controller;
 
+import org.example.docvideoplay.config.JwtUtil;
 import org.example.docvideoplay.entity.User;
 import org.example.docvideoplay.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +23,9 @@ public class AuthController {
 
     @Autowired
     private UserDetailsService userDetailsService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody Map<String, String> request) {
@@ -64,18 +65,16 @@ public class AuthController {
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
                 
-                // Load user details and set authentication context
+                // Load user details and generate JWT token
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                Authentication authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                String token = jwtUtil.generateToken(userDetails);
                 
-                // For now, return user info directly. In a real app, you would return a JWT token.
                 Map<String, Object> response = new HashMap<>();
                 response.put("message", "Login successful");
                 response.put("userId", user.getId());
                 response.put("username", user.getUsername());
                 response.put("email", user.getEmail());
+                response.put("token", token);
                 return ResponseEntity.ok(response);
             } else {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");

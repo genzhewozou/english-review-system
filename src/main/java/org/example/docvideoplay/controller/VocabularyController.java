@@ -61,7 +61,7 @@ public class VocabularyController implements VocabularyApi {
     }
 
     @Override
-    public ResponseEntity<CardResultDto> createCard(@Valid CardParamsDto params) {
+    public ResponseEntity<?> createCard(@Valid CardParamsDto params) {
         try {
             Long currentUserId = getCurrentUserId();
             logger.info("Creating card: materialId={}, text={}, userId={}",
@@ -72,7 +72,7 @@ public class VocabularyController implements VocabularyApi {
                 if (!vocabularyService.isValidPosition(params.getStartPosition(), params.getEndPosition())) {
                     logger.warn("Invalid card positions: start={}, end={}",
                             params.getStartPosition(), params.getEndPosition());
-                    return ResponseEntity.badRequest().build();
+                    return ResponseEntity.badRequest().body("{\"error\": \"Invalid card positions\"}");
                 }
             }
 
@@ -81,6 +81,7 @@ public class VocabularyController implements VocabularyApi {
                     currentUserId,
                     params.getMaterialId(),
                     params.getText(),
+                    params.getBackText(),
                     params.getContext(),
                     params.getStartPosition(),
                     params.getEndPosition(),
@@ -98,16 +99,23 @@ public class VocabularyController implements VocabularyApi {
             result.setEndPosition(card.getEndPosition());
             result.setUserComment(card.getUserComment());
             result.setCreatedDate(card.getCreatedDate());
+            // Set tags if present
+            if (card.getTags() != null && !card.getTags().isEmpty()) {
+                java.util.List<Long> tagIds = java.util.Arrays.stream(card.getTags().split(","))
+                        .map(Long::parseLong)
+                        .collect(java.util.stream.Collectors.toList());
+                result.setTags(tagIds);
+            }
 
             logger.info("Card created successfully: id={}", card.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(result);
 
         } catch (IllegalArgumentException e) {
             logger.warn("Card creation validation failed: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("Unexpected error during card creation: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("{\"error\": \"" + e.getMessage() + "\"}");
         }
     }
 
@@ -129,6 +137,13 @@ public class VocabularyController implements VocabularyApi {
                         dto.setEndPosition(card.getEndPosition());
                         dto.setUserComment(card.getUserComment());
                         dto.setCreatedDate(card.getCreatedDate());
+                        // Set tags if present
+                        if (card.getTags() != null && !card.getTags().isEmpty()) {
+                            java.util.List<Long> tagIds = java.util.Arrays.stream(card.getTags().split(","))
+                                    .map(Long::parseLong)
+                                    .collect(java.util.stream.Collectors.toList());
+                            dto.setTags(tagIds);
+                        }
                         return dto;
                     })
                     .collect(java.util.stream.Collectors.toList());
@@ -163,6 +178,13 @@ public class VocabularyController implements VocabularyApi {
                         dto.setEndPosition(card.getEndPosition());
                         dto.setUserComment(card.getUserComment());
                         dto.setCreatedDate(card.getCreatedDate());
+                        // Set tags if present
+                        if (card.getTags() != null && !card.getTags().isEmpty()) {
+                            java.util.List<Long> tagIds = java.util.Arrays.stream(card.getTags().split(","))
+                                    .map(Long::parseLong)
+                                    .collect(java.util.stream.Collectors.toList());
+                            dto.setTags(tagIds);
+                        }
                         return dto;
                     })
                     .collect(java.util.stream.Collectors.toList());
@@ -238,6 +260,11 @@ public class VocabularyController implements VocabularyApi {
                 card = vocabularyService.updateCardPosition(id, updateDto.getStartPosition(), updateDto.getEndPosition(), currentUserId);
             }
 
+            // Update tags if provided
+            if (updateDto.getTags() != null) {
+                card = vocabularyService.updateCardTags(id, updateDto.getTags(), currentUserId);
+            }
+
             // Convert to DTO
             CardResultDto result = new CardResultDto();
             result.setId(card.getId());
@@ -299,6 +326,13 @@ public class VocabularyController implements VocabularyApi {
                         dto.setEndPosition(card.getEndPosition());
                         dto.setUserComment(card.getUserComment());
                         dto.setCreatedDate(card.getCreatedDate());
+                        // Set tags if present
+                        if (card.getTags() != null && !card.getTags().isEmpty()) {
+                            java.util.List<Long> tagIds = java.util.Arrays.stream(card.getTags().split(","))
+                                    .map(Long::parseLong)
+                                    .collect(java.util.stream.Collectors.toList());
+                            dto.setTags(tagIds);
+                        }
                         return dto;
                     })
                     .collect(java.util.stream.Collectors.toList());
@@ -330,6 +364,13 @@ public class VocabularyController implements VocabularyApi {
                         dto.setEndPosition(card.getEndPosition());
                         dto.setUserComment(card.getUserComment());
                         dto.setCreatedDate(card.getCreatedDate());
+                        // Set tags if present
+                        if (card.getTags() != null && !card.getTags().isEmpty()) {
+                            java.util.List<Long> tagIds = java.util.Arrays.stream(card.getTags().split(","))
+                                    .map(Long::parseLong)
+                                    .collect(java.util.stream.Collectors.toList());
+                            dto.setTags(tagIds);
+                        }
                         return dto;
                     })
                     .collect(java.util.stream.Collectors.toList());
@@ -361,6 +402,13 @@ public class VocabularyController implements VocabularyApi {
                         dto.setEndPosition(card.getEndPosition());
                         dto.setUserComment(card.getUserComment());
                         dto.setCreatedDate(card.getCreatedDate());
+                        // Set tags if present
+                        if (card.getTags() != null && !card.getTags().isEmpty()) {
+                            java.util.List<Long> tagIds = java.util.Arrays.stream(card.getTags().split(","))
+                                    .map(Long::parseLong)
+                                    .collect(java.util.stream.Collectors.toList());
+                            dto.setTags(tagIds);
+                        }
                         return dto;
                     })
                     .collect(java.util.stream.Collectors.toList());
@@ -396,6 +444,12 @@ public class VocabularyController implements VocabularyApi {
                         dto.setEndPosition(card.getEndPosition());
                         dto.setUserComment(card.getUserComment());
                         dto.setCreatedDate(card.getCreatedDate());
+                        if (card.getTags() != null && !card.getTags().isEmpty()) {
+                            java.util.List<Long> tagIds = java.util.Arrays.stream(card.getTags().split(","))
+                                    .map(Long::parseLong)
+                                    .collect(java.util.stream.Collectors.toList());
+                            dto.setTags(tagIds);
+                        }
                         return dto;
                     })
                     .collect(java.util.stream.Collectors.toList());

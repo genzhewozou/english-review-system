@@ -39,8 +39,16 @@ public class UserService {
         
         if (userOptional.isPresent()) {
             User user = userOptional.get();
+            // First try BCrypt password matching
             if (passwordEncoder.matches(password, user.getPasswordHash())) {
                 return userOptional;
+            }
+            // If BCrypt fails, try direct password comparison (for old users with plain text passwords)
+            else if (password.equals(user.getPasswordHash())) {
+                // Update old user's password to BCrypt format
+                user.setPasswordHash(passwordEncoder.encode(password));
+                userRepository.save(user);
+                return Optional.of(user);
             }
         }
         return Optional.empty();
@@ -68,12 +76,19 @@ public class UserService {
 
     // Initialize default user if not exists
     public void initializeDefaultUser() {
-        if (!userRepository.existsByUsername("leo")) {
+        Optional<User> userOptional = userRepository.findByUsername("leo");
+        if (userOptional.isPresent()) {
+            // Update existing user's password to BCrypt format
+            User user = userOptional.get();
+            user.setPasswordHash(passwordEncoder.encode("111111"));
+            userRepository.save(user);
+        } else {
+            // Create new user if not exists
             User user = new User();
             user.setId(1L);
             user.setUsername("leo");
             user.setEmail("leo@example.com");
-            user.setPasswordHash(passwordEncoder.encode("password123"));
+            user.setPasswordHash(passwordEncoder.encode("111111"));
             userRepository.save(user);
         }
     }

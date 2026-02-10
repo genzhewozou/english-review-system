@@ -114,7 +114,8 @@ export default {
     const progressPercentage = computed(() => {
       const total = props.totalQuestions || 0
       if (total === 0) return 0
-      return (props.currentQuestion / total) * 100
+      const progress = (props.currentQuestion / total) * 100
+      return Math.min(progress, 100) // Ensure progress doesn't exceed 100%
     })
 
     const accuracy = computed(() => {
@@ -124,7 +125,9 @@ export default {
 
     const sessionDuration = computed(() => {
       if (!props.sessionStartTime) return 0
-      return Math.floor((new Date() - props.sessionStartTime) / 1000)
+      const now = new Date()
+      const duration = Math.floor((now - props.sessionStartTime) / 1000)
+      return Math.max(0, duration)
     })
 
     const averageTimePerQuestion = computed(() => {

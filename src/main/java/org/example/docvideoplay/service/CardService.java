@@ -47,6 +47,7 @@ public interface CardService {
      * @param userId The ID of the user creating the card
      * @param materialId The ID of the study material
      * @param text The card front text
+     * @param backText The card back text (translation/definition)
      * @param context The surrounding context
      * @param startPosition The start position in the text
      * @param endPosition The end position in the text
@@ -55,7 +56,7 @@ public interface CardService {
      * @return The created Card entity
      * @throws IllegalArgumentException if material not found or invalid parameters
      */
-    Card createCardFromHighlightWithCommentAndTags(Long userId, Long materialId, String text, String context,
+    Card createCardFromHighlightWithCommentAndTags(Long userId, Long materialId, String text, String backText, String context,
                                                   Integer startPosition, Integer endPosition, String userComment, List<Long> tags);
     
     /**

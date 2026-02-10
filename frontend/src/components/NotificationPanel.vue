@@ -4,7 +4,7 @@
     <div class="notification-trigger" @click="togglePanel" aria-label="Notifications">
       <div class="notification-badge-container" :class="{ 'has-notifications': unreadCount > 0 }">
         <div class="notification-icon">
-          <Bell />
+          <el-icon><Bell /></el-icon>
         </div>
         <span v-if="unreadCount > 0" class="notification-badge" :class="{ 'pulse': unreadCount > 0 }">
           {{ unreadCount > 99 ? '99+' : unreadCount }}
@@ -27,7 +27,7 @@
               Mark All Read
             </button>
             <button @click="showSettings = true" class="btn btn-sm btn-outline notification-btn" aria-label="Notification settings">
-              <Setting />
+              <el-icon><Setting /></el-icon>
             </button>
           </div>
         </div>
@@ -42,7 +42,7 @@
           <!-- Empty State -->
           <div v-else-if="notifications.length === 0" class="notification-empty">
             <div class="empty-icon">
-              <Bell />
+              <el-icon><Bell /></el-icon>
             </div>
             <h4 class="empty-title">No notifications yet</h4>
             <p class="empty-subtitle">You'll see updates and reminders here</p>
@@ -67,10 +67,10 @@
                 </div>
                 <div class="notification-actions-item">
                   <button @click.stop="markAsRead(notification.id)" class="action-btn" aria-label="Mark as read">
-                    <Check />
+                    <el-icon><Check /></el-icon>
                   </button>
                   <button @click.stop="deleteNotification(notification.id)" class="action-btn" aria-label="Delete notification">
-                    <Close />
+                    <el-icon><Close /></el-icon>
                   </button>
                 </div>
               </div>
@@ -93,10 +93,10 @@
                 </div>
                 <div class="notification-actions-item">
                   <button @click.stop="markAsRead(notification.id)" class="action-btn" aria-label="Mark as read">
-                    <Check />
+                    <el-icon><Check /></el-icon>
                   </button>
                   <button @click.stop="deleteNotification(notification.id)" class="action-btn" aria-label="Delete notification">
-                    <Close />
+                    <el-icon><Close /></el-icon>
                   </button>
                 </div>
               </div>
@@ -119,10 +119,10 @@
                 </div>
                 <div class="notification-actions-item">
                   <button @click.stop="markAsRead(notification.id)" class="action-btn" aria-label="Mark as read">
-                    <Check />
+                    <el-icon><Check /></el-icon>
                   </button>
                   <button @click.stop="deleteNotification(notification.id)" class="action-btn" aria-label="Delete notification">
-                    <Close />
+                    <el-icon><Close /></el-icon>
                   </button>
                 </div>
               </div>
@@ -131,7 +131,7 @@
         </div>
 
         <div class="notification-footer">
-          <button @click="$router.push('/todo')" class="btn btn-sm btn-primary" aria-label="View all tasks">
+          <button @click="router.push('/todo')" class="btn btn-sm btn-primary" aria-label="View all tasks">
             View All Tasks
           </button>
         </div>
@@ -144,7 +144,7 @@
         <div class="modal-header">
           <h3>Notification Settings</h3>
           <button @click="showSettings = false" class="btn btn-sm btn-outline" aria-label="Close settings">
-            <Close />
+            <el-icon><Close /></el-icon>
           </button>
         </div>
         <div class="modal-content">
@@ -164,11 +164,16 @@ import { useRouter } from 'vue-router'
 import { useNotificationStore } from '../stores/notificationStore'
 import { useNotification } from '../composables/useNotification'
 import NotificationSettings from './NotificationSettings.vue'
+import { Bell, Check, Close, Setting } from '@element-plus/icons-vue'
 
 export default {
   name: 'NotificationPanel',
   components: {
-    NotificationSettings
+    NotificationSettings,
+    Bell,
+    Check,
+    Close,
+    Setting
   },
   setup() {
     const router = useRouter()
@@ -285,7 +290,8 @@ export default {
       deleteNotification,
       handleSettingsSaved,
       handleSettingsClose,
-      formatTime
+      formatTime,
+      router
     }
   }
 }

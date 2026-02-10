@@ -266,10 +266,27 @@ The system should detect text selection and show a popup with options to create 
       console.log('Creating card:', selectedText.value)
       
       if (selectedText.value) {
+        // Extract context around the selected text
+        const fullText = documentContent.value || displayContent.value
+        const selectedIndex = fullText.indexOf(selectedText.value)
+        
+        let context = ''
+        if (selectedIndex !== -1) {
+          // Get 100 characters before and after the selected text as context
+          const start = Math.max(0, selectedIndex - 100)
+          const end = Math.min(fullText.length, selectedIndex + selectedText.value.length + 100)
+          
+          context = fullText.substring(start, end)
+          
+          // Add ellipsis if context is truncated
+          if (start > 0) context = '...' + context
+          if (end < fullText.length) context = context + '...'
+        }
+        
         // Emit the text-selected event to parent
         const selectionData = {
           text: selectedText.value,
-          context: selectedText.value,
+          context: context,
           startPosition: 0,
           endPosition: selectedText.value.length
         }

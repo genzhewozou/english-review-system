@@ -60,19 +60,15 @@ public class VocabularyServiceImpl implements VocabularyService {
     @Override
     public Card createCardFromHighlightWithComment(Long userId, Long materialId, String text, String context,
                                                Integer startPosition, Integer endPosition, String userComment) {
-        return createCardFromHighlightWithCommentAndTags(userId, materialId, text, context, startPosition, endPosition, userComment, null);
+        return createCardFromHighlightWithCommentAndTags(userId, materialId, text, text, context, startPosition, endPosition, userComment, null);
     }
     
     @Override
-    public Card createCardFromHighlightWithCommentAndTags(Long userId, Long materialId, String text, String context,
-                                               Integer startPosition, Integer endPosition, String userComment, List<Long> tags) {
+    public Card createCardFromHighlightWithCommentAndTags(Long userId, Long materialId, String text, String backText, String context,
+                                               Integer startPosition, Integer endPosition, String userComment, List<Object> tags) {
         // Validate input parameters
         if (userId == null) {
             throw new IllegalArgumentException("User ID cannot be null");
-        }
-        
-        if (materialId == null) {
-            throw new IllegalArgumentException("Material ID cannot be null");
         }
         
         if (!StringUtils.hasText(text)) {
@@ -85,15 +81,17 @@ public class VocabularyServiceImpl implements VocabularyService {
             }
         }
         
-        // Verify that the study material exists and belongs to the user
-        Optional<StudyMaterial> materialOpt = studyMaterialRepository.findById(materialId);
-        if (!materialOpt.isPresent()) {
-            throw new IllegalArgumentException("Study material not found with ID: " + materialId);
-        }
-        
-        StudyMaterial material = materialOpt.get();
-        if (!material.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Study material not found with ID: " + materialId);
+        // Verify that the study material exists and belongs to the user if materialId is provided
+        if (materialId != null) {
+            Optional<StudyMaterial> materialOpt = studyMaterialRepository.findById(materialId);
+            if (!materialOpt.isPresent()) {
+                throw new IllegalArgumentException("Study material not found with ID: " + materialId);
+            }
+            
+            StudyMaterial material = materialOpt.get();
+            if (!material.getUserId().equals(userId)) {
+                throw new IllegalArgumentException("Study material not found with ID: " + materialId);
+            }
         }
         
         // Create new card
@@ -101,7 +99,7 @@ public class VocabularyServiceImpl implements VocabularyService {
         card.setUserId(userId);
         card.setMaterialId(materialId);
         card.setText(text.trim());
-        card.setBackText(text.trim()); // Set backText to match text (required field)
+        card.setBackText((backText != null && !backText.trim().isEmpty()) ? backText.trim() : text.trim());
         card.setContext(context != null ? context.trim() : null);
         card.setStartPosition(startPosition);
         card.setEndPosition(endPosition);
@@ -109,12 +107,33 @@ public class VocabularyServiceImpl implements VocabularyService {
         
         // Handle tags if provided
         if (tags != null && !tags.isEmpty()) {
-            // Get the actual tag entities
-            List<Tag> tagEntities = tagRepository.findAllById(tags);
-            // Filter out tags that don't belong to the current user
-            tagEntities = tagEntities.stream()
-                    .filter(tag -> tag.getUserId().equals(userId) && tag.getIsActive())
-                    .collect(Collectors.toList());
+            List<Tag> tagEntities = new ArrayList<>();
+            
+            for (Object tagObj : tags) {
+                if (tagObj instanceof Long) {
+                    // If tag is a Long (ID), find by ID
+                    Optional<Tag> tagOpt = tagRepository.findById((Long) tagObj);
+                    if (tagOpt.isPresent() && tagOpt.get().getUserId().equals(userId) && tagOpt.get().getIsActive()) {
+                        tagEntities.add(tagOpt.get());
+                    }
+                } else if (tagObj instanceof String) {
+                    // If tag is a String (name), find or create by name
+                    String tagName = (String) tagObj;
+                    if (tagName != null && !tagName.trim().isEmpty()) {
+                        // Try to find existing tag by name
+                        Optional<Tag> existingTag = tagRepository.findByNameAndUserId(tagName.trim(), userId);
+                        if (existingTag.isPresent() && existingTag.get().getIsActive()) {
+                            tagEntities.add(existingTag.get());
+                        } else {
+                            // Create new tag if not exists
+                            Tag newTag = new Tag(userId, tagName.trim(), "");
+                            newTag = tagRepository.save(newTag);
+                            tagEntities.add(newTag);
+                        }
+                    }
+                }
+            }
+            
             // Convert tags to comma-separated string of IDs
             if (!tagEntities.isEmpty()) {
                 String tagIds = tagEntities.stream()
@@ -124,19 +143,27 @@ public class VocabularyServiceImpl implements VocabularyService {
             }
         }
         
-        // Schedule initial spaced repetition reminder
-        spacedRepetitionService.scheduleInitialReminder(card);
-        
         // Save the card
         Card savedCard = cardRepository.save(card);
        
         // Flush to ensure the card is persisted before creating todo items
         cardRepository.flush();
         
-        // Schedule todo item for review reminder
-        todoService.scheduleReviewReminder(savedCard);
+        // Schedule initial spaced repetition reminder
+        try {
+            spacedRepetitionService.scheduleInitialReminder(savedCard);
+        } catch (Exception e) {
+            logger.warn("Error scheduling initial reminder: {}", e.getMessage());
+        }
         
-        logger.info("Created card with ID: {} for material: {}", savedCard.getId(), materialId);
+        // Schedule todo item for review reminder
+        try {
+            todoService.scheduleReviewReminder(savedCard);
+        } catch (Exception e) {
+            logger.warn("Error scheduling review reminder: {}", e.getMessage());
+        }
+        
+        logger.info("Created card with ID: {}" + (materialId != null ? " for material: {}" : " without material"), savedCard.getId(), materialId);
         
         return savedCard;
     }
@@ -429,5 +456,59 @@ public class VocabularyServiceImpl implements VocabularyService {
         }
         
         return startPosition <= endPosition;
+    }
+    
+    @Override
+    public Card updateCardTags(Long cardId, List<Object> tags, Long userId) {
+        Card card = getCardById(cardId, userId);
+        
+        // Handle tags if provided
+        if (tags != null && !tags.isEmpty()) {
+            List<Tag> tagEntities = new ArrayList<>();
+            
+            for (Object tagObj : tags) {
+                if (tagObj instanceof Long) {
+                    // If tag is a Long (ID), find by ID
+                    Optional<Tag> tagOpt = tagRepository.findById((Long) tagObj);
+                    if (tagOpt.isPresent() && tagOpt.get().getUserId().equals(userId) && tagOpt.get().getIsActive()) {
+                        tagEntities.add(tagOpt.get());
+                    }
+                } else if (tagObj instanceof String) {
+                    // If tag is a String (name), find or create by name
+                    String tagName = (String) tagObj;
+                    if (tagName != null && !tagName.trim().isEmpty()) {
+                        // Try to find existing tag by name
+                        Optional<Tag> existingTag = tagRepository.findByNameAndUserId(tagName.trim(), userId);
+                        if (existingTag.isPresent() && existingTag.get().getIsActive()) {
+                            tagEntities.add(existingTag.get());
+                        } else {
+                            // Create new tag if not exists
+                            Tag newTag = new Tag(userId, tagName.trim(), "");
+                            newTag = tagRepository.save(newTag);
+                            tagEntities.add(newTag);
+                        }
+                    }
+                }
+            }
+            
+            // Convert tags to comma-separated string of IDs
+            if (!tagEntities.isEmpty()) {
+                String tagIds = tagEntities.stream()
+                        .map(tag -> tag.getId().toString())
+                        .collect(Collectors.joining(","));
+                card.setTags(tagIds);
+            } else {
+                // Clear tags if none provided
+                card.setTags(null);
+            }
+        } else {
+            // Clear tags if none provided
+            card.setTags(null);
+        }
+        
+        Card updatedCard = cardRepository.save(card);
+        logger.info("Updated tags for card ID: {}", cardId);
+        
+        return updatedCard;
     }
 }

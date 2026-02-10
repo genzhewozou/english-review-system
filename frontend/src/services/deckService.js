@@ -117,12 +117,12 @@ export function useDeckService() {
   /**
    * Add a card to a deck
    * @param {number} deckId - Deck ID
-   * @param {number} highlightId - Highlight ID to add as card
+   * @param {number} cardId - Card ID to add
    * @returns {Promise<Object>} Updated deck data
    */
-  const addCardToDeck = async (deckId, highlightId) => {
+  const addCardToDeck = async (deckId, cardId) => {
     try {
-      const response = await apiService.post(`/decks/${deckId}/cards`, { highlightId })
+      const response = await apiService.post(`/decks/${deckId}/cards`, { cardId })
       return response.data
     } catch (error) {
       console.error(`Failed to add card to deck ${deckId}:`, error)

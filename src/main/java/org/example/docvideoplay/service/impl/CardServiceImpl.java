@@ -57,17 +57,17 @@ public class CardServiceImpl implements CardService {
     @Override
     public Card createCardFromHighlight(Long userId, Long materialId, String text, String context, 
                                            Integer startPosition, Integer endPosition) {
-        return createCardFromHighlightWithCommentAndTags(userId, materialId, text, context, startPosition, endPosition, null, null);
+        return createCardFromHighlightWithCommentAndTags(userId, materialId, text, text, context, startPosition, endPosition, null, null);
     }
     
     @Override
     public Card createCardFromHighlightWithComment(Long userId, Long materialId, String text, String context,
                                                Integer startPosition, Integer endPosition, String userComment) {
-        return createCardFromHighlightWithCommentAndTags(userId, materialId, text, context, startPosition, endPosition, userComment, null);
+        return createCardFromHighlightWithCommentAndTags(userId, materialId, text, text, context, startPosition, endPosition, userComment, null);
     }
     
     @Override
-    public Card createCardFromHighlightWithCommentAndTags(Long userId, Long materialId, String text, String context,
+    public Card createCardFromHighlightWithCommentAndTags(Long userId, Long materialId, String text, String backText, String context,
                                                   Integer startPosition, Integer endPosition, String userComment, List<Long> tags) {
         // Validate input parameters
         if (userId == null) {
@@ -102,7 +102,7 @@ public class CardServiceImpl implements CardService {
         card.setUserId(userId);
         card.setMaterialId(materialId);
         card.setText(text.trim());
-        card.setBackText(text.trim()); // Set backText to match text (required field)
+        card.setBackText(backText != null ? backText.trim() : text.trim());
         card.setContext(context != null ? context.trim() : null);
         card.setStartPosition(startPosition);
         card.setEndPosition(endPosition);
