@@ -1,0 +1,155 @@
+<view class="decks">
+  <!-- Header Section -->
+  <view class="decks-header fade-in">
+    <text class="decks-title">Vocabulary Decks</text>
+    <text class="decks-subtitle">Organize your vocabulary into custom decks</text>
+  </view>
+  
+  <!-- Actions Section -->
+  <view class="actions-section fade-in">
+    <view class="action-buttons">
+      <button bindtap="createDeck" class="btn btn-primary">
+        <text class="btn-icon">+</text>
+        <text class="btn-text">Create Deck</text>
+      </button>
+      <button bindtap="importDeck" class="btn btn-secondary">
+        <text class="btn-icon">📤</text>
+        <text class="btn-text">Import</text>
+      </button>
+    </view>
+  </view>
+  
+  <!-- Decks List -->
+  <view class="decks-section fade-in">
+    <view class="decks-header">
+      <text class="decks-title">My Decks</text>
+      <text class="decks-count">{{ decks.length }} decks</text>
+    </view>
+    
+    <!-- Loading State -->
+    <view wx:if="{{ loading }}" class="loading-state">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">Loading decks...</text>
+    </view>
+    
+    <!-- Empty State -->
+    <view wx:elif="{{ decks.length === 0 }}" class="empty-state">
+      <view class="empty-state-icon">📚</view>
+      <text class="empty-state-title">No decks found</text>
+      <text class="empty-state-description">Start creating custom decks to organize your vocabulary</text>
+      <button bindtap="createDeck" class="btn btn-primary">
+        <text class="btn-icon">+</text>
+        <text class="btn-text">Create First Deck</text>
+      </button>
+    </view>
+    
+    <!-- Decks List -->
+    <view wx:else class="decks-list">
+      <view wx:for="{{ decks }}" wx:key="index" class="deck-item card">
+        <view class="deck-icon">
+          <text class="icon">{{ getDeckIcon(decks[index].id) }}</text>
+        </view>
+        <view class="deck-content">
+          <view class="deck-header">
+            <text class="deck-name">{{ decks[index].name }}</text>
+            <text class="deck-count">{{ decks[index].cardCount }} cards</text>
+          </view>
+          <text class="deck-description">{{ decks[index].description }}</text>
+          <view class="deck-meta">
+            <text class="deck-created">Created: {{ formatDate(decks[index].createdDate) }}</text>
+            <text class="deck-last-reviewed" wx:if="{{ decks[index].lastReviewedDate }}">
+              Last Reviewed: {{ formatDate(decks[index].lastReviewedDate) }}
+            </text>
+          </view>
+        </view>
+        <view class="deck-actions">
+          <button bindtap="reviewDeck" data-index="{{ index }}" class="deck-action-btn review-btn">
+            ▶
+          </button>
+          <button bindtap="editDeck" data-index="{{ index }}" class="deck-action-btn edit-btn">
+            ✏️
+          </button>
+          <button bindtap="deleteDeck" data-index="{{ index }}" class="deck-action-btn delete-btn">
+            🗑️
+          </button>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Create Deck Modal -->
+  <view wx:if="{{ showCreateModal }}" class="modal-overlay" catchtap="closeCreateModal">
+    <view class="modal" catchtap="">
+      <view class="modal-header">
+        <text>{{ editingDeck ? 'Edit Deck' : 'Create New Deck' }}</text>
+        <button bindtap="closeCreateModal" class="close-btn">&times;</button>
+      </view>
+      <view class="modal-body">
+        <form bindsubmit="saveDeck">
+          <view class="form-group">
+            <text class="form-label">Deck Name</text>
+            <input 
+              value="{{ deckForm.name }}" 
+              bindinput="handleDeckNameInput" 
+              type="text" 
+              placeholder="Enter deck name..." 
+              class="form-control"
+            ></input>
+          </view>
+          <view class="form-group">
+            <text class="form-label">Description (Optional)</text>
+            <textarea 
+              value="{{ deckForm.description }}" 
+              bindinput="handleDeckDescriptionInput" 
+              placeholder="Enter deck description..." 
+              class="form-control"
+            ></textarea>
+          </view>
+          <view class="form-group">
+            <text class="form-label">Deck Type</text>
+            <picker bindchange="handleDeckTypeChange" value="{{ deckForm.type }}" range="{{ deckTypes }}">
+              <view class="form-control">
+                {{ deckTypes[deckForm.type] }}
+              </view>
+            </picker>
+          </view>
+          <view class="form-actions">
+            <button type="button" bindtap="closeCreateModal" class="btn btn-outline">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" disabled="{{ saving }}">
+              <view wx:if="{{ saving }}" class="loading-spinner small"></view>
+              {{ saving ? 'Saving...' : (editingDeck ? 'Update Deck' : 'Create Deck') }}
+            </button>
+          </view>
+        </form>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Import Deck Modal -->
+  <view wx:if="{{ showImportModal }}" class="modal-overlay" catchtap="closeImportModal">
+    <view class="modal" catchtap="">
+      <view class="modal-header">
+        <text>Import Deck</text>
+        <button bindtap="closeImportModal" class="close-btn">&times;</button>
+      </view>
+      <view class="modal-body">
+        <view class="import-options">
+          <button bindtap="importFromFile" class="btn btn-secondary import-btn">
+            <text class="btn-icon">📁</text>
+            <text class="btn-text">Import from File</text>
+          </button>
+          <button bindtap="importFromShare" class="btn btn-secondary import-btn">
+            <text class="btn-icon">🔗</text>
+            <text class="btn-text">Import from Share Link</text>
+          </button>
+          <button bindtap="importFromTemplate" class="btn btn-secondary import-btn">
+            <text class="btn-icon">📄</text>
+            <text class="btn-text">Import from Template</text>
+          </button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

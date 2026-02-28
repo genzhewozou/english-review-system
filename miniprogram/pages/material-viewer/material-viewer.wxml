@@ -1,0 +1,250 @@
+<view class="material-viewer">
+  <!-- Header Section -->
+  <view class="viewer-header">
+    <button bindtap="goBack" class="back-button">
+      <text class="back-icon">←</text>
+      Back
+    </button>
+    <view class="header-actions">
+      <button bindtap="downloadMaterial" class="header-button">
+        <text class="button-icon">↓</text>
+        Download
+      </button>
+      <button bindtap="toggleSelectionMode" class="header-button" wx:if="{{ !isSelectionMode }}">
+        <text class="button-icon">✏️</text>
+        Selection Mode
+      </button>
+      <button bindtap="toggleSelectionMode" class="header-button active" wx:elif="{{ isSelectionMode }}">
+        <text class="button-icon">✏️</text>
+        Exit Selection
+      </button>
+    </view>
+  </view>
+  
+  <!-- Selection Mode Alert -->
+  <view wx:if="{{ isSelectionMode }}" class="selection-alert">
+    <text class="alert-icon">ℹ️</text>
+    <text class="alert-text">Selection Mode Active: Select text to create cards. Click on existing cards to edit them.</text>
+  </view>
+
+  <!-- Material Content Section -->
+  <view class="material-content">
+    <view wx:if="{{ loading }}" class="loading-container">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">Loading material...</text>
+    </view>
+    
+    <view wx:elif="{{ !material }}" class="error-container">
+      <text class="error-icon">❌</text>
+      <text class="error-text">Material not found</text>
+      <button bindtap="goBack" class="error-button">
+        Go Back
+      </button>
+    </view>
+    
+    <view wx:else class="material-wrapper">
+      <!-- Material Metadata -->
+      <view class="material-meta">
+        <text class="material-title">{{ material.title }}</text>
+        <view class="meta-info">
+          <text class="meta-item">
+            <text class="meta-icon">📄</text>
+            <text class="meta-value">{{ material.fileName }}</text>
+          </text>
+          <text class="meta-item">
+            <text class="meta-icon">📊</text>
+            <text class="meta-value">{{ formatFileSize(material.fileSize) }}</text>
+          </text>
+          <text class="meta-item">
+            <text class="meta-icon">📅</text>
+            <text class="meta-value">{{ formatDate(material.createdDate) }}</text>
+          </text>
+        </view>
+      </view>
+
+      <!-- Content Area -->
+      <view class="content-area">
+        <!-- Main Content -->
+        <view class="main-content">
+          <!-- Material Content -->
+          <view class="content-section" wx:if="{{ material.type === 'DOCUMENT' }}">
+            <view class="content-body" bindtap="handleTextTap" data-mode="{{ isSelectionMode }}">
+              <rich-text nodes="{{ contentNodes }}"></rich-text>
+            </view>
+          </view>
+          
+          <view class="content-section" wx:elif="{{ material.type === 'VIDEO' }}">
+            <view class="video-placeholder">
+              <text class="video-icon">🎥</text>
+              <text class="video-text">Video content: {{ material.title }}</text>
+              <text class="video-hint">Video playback functionality would be implemented here</text>
+            </view>
+          </view>
+          
+          <view class="content-section" wx:else>
+            <view class="article-placeholder">
+              <text class="article-icon">📝</text>
+              <text class="article-text">Article content: {{ material.title }}</text>
+              <text class="article-hint">Article content would be displayed here</text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- Cards Sidebar -->
+        <view class="cards-sidebar">
+          <view class="sidebar-card">
+            <view class="sidebar-header">
+              <text class="sidebar-title">Cards</text>
+              <text class="cards-count">{{ cards.length }}</text>
+            </view>
+            <view class="sidebar-body">
+              <view wx:if="{{ cards.length === 0 }}" class="empty-cards">
+                <text class="empty-icon">📝</text>
+                <text class="empty-title">No cards yet</text>
+                <text class="empty-text">Start selecting text to create vocabulary cards!</text>
+              </view>
+              <view wx:else class="cards-list">
+                <view wx:for="{{ cards }}" wx:key="index" class="card-item">
+                  <text class="card-word">{{ item.text }}</text>
+                  <view class="card-actions">
+                    <button bindtap="editCard" data-card="{{ item }}" class="action-button primary">
+                      Edit
+                    </button>
+                    <button bindtap="deleteCard" data-card="{{ item }}" class="action-button secondary">
+                      Delete
+                    </button>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- Highlights Section -->
+      <view class="highlights-section" wx:if="{{ isSelectionMode || highlights.length > 0 }}">
+        <view class="section-header">
+          <text class="section-title">Vocabulary Highlights</text>
+          <text class="highlights-count">{{ highlights.length }} words</text>
+        </view>
+        
+        <view wx:if="{{ highlights.length === 0 }}" class="empty-highlights">
+          <text class="empty-icon">💡</text>
+          <text class="empty-text">{{ isSelectionMode ? 'Tap on words to highlight them' : 'No highlights yet' }}</text>
+        </view>
+        
+        <view wx:else class="highlights-list">
+          <view wx:for="{{ highlights }}" wx:key="index" class="highlight-item">
+            <text class="highlight-word">{{ item.word }}</text>
+            <view class="highlight-actions">
+              <button bindtap="addWordToVocabulary" data-word="{{ item.word }}" class="action-button primary">
+                Add to Vocabulary
+              </button>
+              <button bindtap="removeHighlight" data-index="{{ index }}" class="action-button secondary">
+                Remove
+              </button>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Vocabulary Modal -->
+  <view wx:if="{{ showVocabularyModal }}" class="modal-overlay" bindtap="closeVocabularyModal"></view>
+  <view wx:if="{{ showVocabularyModal }}" class="vocabulary-modal">
+    <view class="modal-header">
+      <text class="modal-title">Add to Vocabulary</text>
+      <button bindtap="closeVocabularyModal" class="modal-close">✕</button>
+    </view>
+    <view class="modal-body">
+      <view class="form-group">
+        <text class="form-label">Word</text>
+        <input value="{{ newWord }}" disabled class="form-input" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">Definition</text>
+        <textarea value="{{ newDefinition }}" bindinput="handleDefinitionInput" placeholder="Enter definition" class="form-textarea" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">Example</text>
+        <textarea value="{{ newExample }}" bindinput="handleExampleInput" placeholder="Enter example sentence" class="form-textarea" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">Category</text>
+        <picker bindchange="handleCategoryChange" value="{{ selectedCategoryIndex }}" range="{{ categories }}">
+          <view class="picker-view">
+            {{ categories[selectedCategoryIndex] }}
+            <text class="picker-arrow">▼</text>
+          </view>
+        </picker>
+      </view>
+    </view>
+    <view class="modal-footer">
+      <button bindtap="closeVocabularyModal" class="modal-button secondary">Cancel</button>
+      <button bindtap="confirmAddToVocabulary" class="modal-button primary">Add to Vocabulary</button>
+    </view>
+  </view>
+  
+  <!-- Card Creation Dialog -->
+  <view wx:if="{{ showCardDialog }}" class="modal-overlay" bindtap="resetCardDialog"></view>
+  <view wx:if="{{ showCardDialog }}" class="card-modal">
+    <view class="modal-header">
+      <text class="modal-title">Create Card</text>
+      <button bindtap="resetCardDialog" class="modal-close">✕</button>
+    </view>
+    <view class="modal-body">
+      <view class="form-group">
+        <text class="form-label">Selected Text</text>
+        <input value="{{ selectedText }}" disabled class="form-input" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">Definition</text>
+        <textarea placeholder="Enter definition" class="form-textarea" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">Context</text>
+        <textarea placeholder="Enter context" class="form-textarea" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">Tags</text>
+        <input placeholder="Enter tags separated by commas" class="form-input" />
+      </view>
+    </view>
+    <view class="modal-footer">
+      <button bindtap="resetCardDialog" class="modal-button secondary">Cancel</button>
+      <button bindtap="handleCardSave" class="modal-button primary">Save Card</button>
+    </view>
+  </view>
+  
+  <!-- Card Edit Dialog -->
+  <view wx:if="{{ showEditDialog }}" class="modal-overlay" bindtap="resetEditDialog"></view>
+  <view wx:if="{{ showEditDialog }}" class="card-modal">
+    <view class="modal-header">
+      <text class="modal-title">Edit Card</text>
+      <button bindtap="resetEditDialog" class="modal-close">✕</button>
+    </view>
+    <view class="modal-body">
+      <view class="form-group">
+        <text class="form-label">Text</text>
+        <input value="{{ editingCard.text }}" disabled class="form-input" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">Definition</text>
+        <textarea placeholder="Enter definition" class="form-textarea" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">Context</text>
+        <textarea placeholder="Enter context" class="form-textarea" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">Tags</text>
+        <input placeholder="Enter tags separated by commas" class="form-input" />
+      </view>
+    </view>
+    <view class="modal-footer">
+      <button bindtap="resetEditDialog" class="modal-button secondary">Cancel</button>
+      <button bindtap="handleCardUpdate" class="modal-button primary">Update Card</button>
+    </view>
+  </view>
+</view>

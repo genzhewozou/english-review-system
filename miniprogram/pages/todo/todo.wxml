@@ -1,0 +1,167 @@
+<view class="todo">
+  <!-- Header Section -->
+  <view class="todo-header fade-in">
+    <view class="header-content">
+      <text class="todo-title">Todo List</text>
+      <button bindtap="addTask" class="btn btn-primary">Add Task</button>
+    </view>
+  </view>
+  
+  <!-- Stats Section -->
+  <view class="stats-section fade-in">
+    <view class="stat-card">
+      <text class="stat-value">{{ totalTasks }}</text>
+      <text class="stat-label">Total Tasks</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-value">{{ pendingTasks }}</text>
+      <text class="stat-label">Pending</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-value">{{ completedTasks }}</text>
+      <text class="stat-label">Completed</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-value">{{ completionRate }}%</text>
+      <text class="stat-label">Completion</text>
+    </view>
+  </view>
+  
+  <!-- Filter Section -->
+  <view class="filter-section fade-in">
+    <view class="filters">
+      <view class="filter-row">
+        <picker bindchange="handleStatusFilterChange" value="{{ filterStatus }}" range="{{ statusOptions }}">
+          <view class="form-control filter-select">
+            {{ statusOptions[filterStatus] }}
+          </view>
+        </picker>
+        <picker bindchange="handleTypeFilterChange" value="{{ filterType }}" range="{{ typeOptions }}">
+          <view class="form-control filter-select">
+            {{ typeOptions[filterType] }}
+          </view>
+        </picker>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Tasks List -->
+  <view class="tasks-section fade-in">
+    <!-- Loading State -->
+    <view wx:if="{{ loading }}" class="loading-state">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">Loading tasks...</text>
+    </view>
+    
+    <!-- Empty State -->
+    <view wx:elif="{{ filteredTasks.length === 0 }}" class="empty-state">
+      <view class="empty-state-icon">📅</view>
+      <text class="empty-state-title">No tasks found</text>
+      <text class="empty-state-description">Add a task or adjust your filters.</text>
+      <button bindtap="addTask" class="btn btn-primary">Add First Task</button>
+    </view>
+    
+    <!-- Tasks List -->
+    <view wx:else class="tasks-list">
+      <view wx:for="{{ filteredTasks }}" wx:key="id" class="task-item card" bindtap="handleTaskClick" data-id="{{ item.id }}" data-index="{{ index }}">
+        <view class="task-checkbox">
+          <checkbox 
+            checked="{{ item.completed }}"
+            bindchange="toggleTaskComplete"
+            data-id="{{ item.id }}"
+          />
+        </view>
+        <view class="task-content">
+          <view class="task-header">
+            <text class="task-title {{ item.completed ? 'completed' : '' }} {{ item.type === 'REVIEW_SESSION' ? 'clickable' : '' }}">
+              {{ item.title }}
+            </text>
+            <view class="task-actions">
+              <text class="task-type {{ item.type === 'REVIEW_SESSION' ? 'review-session' : '' }}">
+                {{ item.type === 'REVIEW_SESSION' ? 'Review Session' : 'Custom Task' }}
+              </text>
+              <button bindtap="deleteTask" data-id="{{ item.id }}" class="btn btn-sm delete-btn">Delete</button>
+            </view>
+          </view>
+          <text wx:if="{{ item.description }}" class="task-description {{ item.completed ? 'completed' : '' }}">
+            {{ item.description }}
+          </text>
+          <view class="task-meta">
+            <text wx:if="{{ item.dueDate }}" class="due-date">
+              <strong>Due:</strong> {{ formatDate(item.dueDate) }}
+            </text>
+            <text wx:if="{{ item.relatedHighlight }}" class="related-highlight">
+              <strong>Related to:</strong> {{ item.relatedHighlight.text || 'Highlight' }}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Add Task Modal -->
+  <view wx:if="{{ showAddModal }}" class="modal-overlay" catchtap="closeAddModal">
+    <view class="modal" catchtap="">
+      <view class="modal-header">
+        <text>{{ editingTask ? 'Edit Task' : 'Add New Task' }}</text>
+        <button bindtap="closeAddModal" class="close-btn">&times;</button>
+      </view>
+      <view class="modal-body">
+        <form bindsubmit="saveTask">
+          <view class="form-group">
+            <text class="form-label">Title</text>
+            <input 
+              value="{{ taskForm.title }}" 
+              bindinput="handleTaskTitleInput" 
+              type="text" 
+              placeholder="Enter task title..." 
+              class="form-control"
+            ></input>
+          </view>
+          <view class="form-group">
+            <text class="form-label">Description</text>
+            <textarea 
+              value="{{ taskForm.description }}" 
+              bindinput="handleTaskDescriptionInput" 
+              placeholder="Enter task description..." 
+              class="form-control"
+            ></textarea>
+          </view>
+          <view class="form-group">
+            <text class="form-label">Due Date</text>
+            <picker bindchange="handleTaskDueDateChange" mode="date" value="{{ taskForm.dueDate }}" start="{{ getTodayDate() }}">
+              <view class="form-control">
+                {{ taskForm.dueDate || 'Select due date' }}
+              </view>
+            </picker>
+          </view>
+          <view class="form-group">
+            <text class="form-label">Priority</text>
+            <picker bindchange="handleTaskPriorityChange" value="{{ taskForm.priority }}" range="{{ priorityOptions }}">
+              <view class="form-control">
+                {{ priorityOptions[taskForm.priority] || 'Low' }}
+              </view>
+            </picker>
+          </view>
+          <view class="form-group">
+            <text class="form-label">Category</text>
+            <picker bindchange="handleTaskCategoryChange" value="{{ categoryOptions.indexOf(taskForm.category) >= 0 ? categoryOptions.indexOf(taskForm.category) : 0 }}" range="{{ categoryOptions }}">
+              <view class="form-control">
+                {{ taskForm.category || 'Select category' }}
+              </view>
+            </picker>
+          </view>
+          <view class="form-actions">
+            <button type="button" bindtap="closeAddModal" class="btn btn-outline">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" disabled="{{ saving }}">
+              <view wx:if="{{ saving }}" class="loading-spinner small"></view>
+              {{ saving ? 'Saving...' : (editingTask ? 'Update Task' : 'Add Task') }}
+            </button>
+          </view>
+        </form>
+      </view>
+    </view>
+  </view>
+</view>

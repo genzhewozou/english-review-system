@@ -1,0 +1,56 @@
+<view class="auth-container" aria-labelledby="login-heading">
+  <view class="auth-card" tabindex="0">
+    <text id="login-heading" class="auth-title">Login</text>
+    <form bindsubmit="handleLogin" class="login-form">
+      <view class="form-group" role="group" aria-labelledby="username-label">
+        <text id="username-label" class="form-label">Username</text>
+        <input 
+          type="text" 
+          id="username"
+          value="{{ form.username }}" 
+          bindinput="handleInput"
+          data-field="username"
+          placeholder="Enter your username"
+          disabled="{{ loading }}"
+          class="form-control"
+          required
+          aria-required="true"
+        />
+      </view>
+      <view class="form-group" role="group" aria-labelledby="password-label">
+        <text id="password-label" class="form-label">Password</text>
+        <input 
+          type="password" 
+          id="password"
+          value="{{ form.password }}" 
+          bindinput="handleInput"
+          data-field="password"
+          placeholder="Enter your password"
+          disabled="{{ loading }}"
+          class="form-control"
+          required
+          aria-required="true"
+        />
+      </view>
+      <view class="form-actions">
+        <button 
+          type="submit" 
+          disabled="{{ loading }}"
+          class="btn btn-primary"
+          form-type="submit"
+          aria-busy="{{ loading }}"
+        >
+          <view wx:if="{{ loading }}" class="loading-spinner"></view>
+          {{ loading ? 'Logging in...' : 'Login' }}
+        </button>
+      </view>
+    </form>
+    <view class="auth-link">
+      Don't have an account? 
+      <navigator url="/pages/register/register" aria-label="Register here" class="link">Register here</navigator>
+    </view>
+    <view wx:if="{{ error }}" class="error-message" role="alert" aria-live="assertive">
+      {{ error }}
+    </view>
+  </view>
+</view>

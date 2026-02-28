@@ -1,0 +1,298 @@
+<view class="dashboard" aria-label="Learning dashboard">
+  <!-- Dashboard Header with Welcome Message -->
+  <view class="dashboard-header" role="banner">
+    <view class="dashboard-header-content">
+      <text class="dashboard-title" tabindex="0">Welcome Back!</text>
+      <text class="dashboard-subtitle" tabindex="0">Here's your personalized learning overview</text>
+      <view class="dashboard-meta">
+        <text class="dashboard-date" tabindex="0">{{ currentDate }}</text>
+        <text class="dashboard-streak" wx:if="{{ learningStreak > 0 }}" tabindex="0" aria-live="polite">
+          📅 {{ learningStreak }}-day learning streak!
+        </text>
+      </view>
+    </view>
+    <view class="dashboard-actions" role="group" aria-label="Dashboard actions">
+      <navigator url="/pages/review/review" class="btn btn-primary" wx:if="{{ pendingReviews > 0 }}" aria-label="Start review session">
+        <text class="btn-icon">🔄</text>
+        <text class="btn-text">Start Review</text>
+      </navigator>
+      <navigator url="/pages/materials/materials" class="btn btn-secondary" aria-label="Add new study material">
+        <text class="btn-icon">📄</text>
+        <text class="btn-text">Add Material</text>
+      </navigator>
+    </view>
+  </view>
+  
+  <!-- Notification Alerts -->
+  <view class="notification-alerts" role="alert" aria-live="assertive">
+    <view 
+      wx:if="{{ overdueCount > 0 && showOverdueAlert }}" 
+      class="alert alert-overdue"
+      aria-atomic="true"
+    >
+      <view class="alert-icon">⚠️</view>
+      <view class="alert-content">
+        <text class="alert-title">{{ overdueCount }} Overdue Task{{ overdueCount > 1 ? 's' : '' }}</text>
+        <text class="alert-message">{{ overdueMessage }}</text>
+      </view>
+      <view class="alert-actions">
+        <button class="alert-dismiss" bindtap="dismissOverdueAlert" aria-label="Dismiss overdue alert" tabindex="0">✕</button>
+        <navigator url="/pages/todo/todo" class="btn btn-sm btn-primary" aria-label="View overdue tasks">View Tasks</navigator>
+      </view>
+    </view>
+    
+    <view 
+      wx:if="{{ dueTodayCount > 0 && showDueTodayAlert }}" 
+      class="alert alert-warning"
+      aria-atomic="true"
+    >
+      <view class="alert-icon">⏰</view>
+      <view class="alert-content">
+        <text class="alert-title">{{ dueTodayCount }} Task{{ dueTodayCount > 1 ? 's' : '' }} Due Today</text>
+        <text class="alert-message">{{ dueTodayMessage }}</text>
+      </view>
+      <view class="alert-actions">
+        <button class="alert-dismiss" bindtap="dismissDueTodayAlert" aria-label="Dismiss due today alert" tabindex="0">✕</button>
+        <navigator url="/pages/todo/todo" class="btn btn-sm btn-primary" aria-label="View tasks due today">View Tasks</navigator>
+      </view>
+    </view>
+    
+    <view 
+      wx:if="{{ pendingReviews > 0 && showReviewAlert }}" 
+      class="alert alert-info"
+      aria-atomic="true"
+    >
+      <view class="alert-icon">📝</view>
+      <view class="alert-content">
+        <text class="alert-title">{{ pendingReviews }} Review{{ pendingReviews > 1 ? 's' : '' }} Available</text>
+        <text class="alert-message">You have vocabulary reviews ready for practice</text>
+      </view>
+      <view class="alert-actions">
+        <button class="alert-dismiss" bindtap="dismissReviewAlert" aria-label="Dismiss review alert" tabindex="0">✕</button>
+        <navigator url="/pages/review/review" class="btn btn-sm btn-primary" aria-label="Start review session">Start Review</navigator>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Key Metrics Grid -->
+  <view class="dashboard-grid" aria-labelledby="metrics-heading">
+    <text id="metrics-heading" class="sr-only">Learning Metrics</text>
+    <view class="dashboard-card metric-card" tabindex="0">
+      <view class="metric-header">
+        <view class="metric-icon materials-icon" aria-hidden="true">📄</view>
+        <view class="metric-badge" wx:if="{{ newMaterials > 0 }}" aria-live="polite">
+          +{{ newMaterials }}
+        </view>
+      </view>
+      <view class="metric-content">
+        <text class="metric-title">Study Materials</text>
+        <text class="metric-value">{{ materialsCount }}</text>
+        <text class="metric-desc">Total materials</text>
+        <view class="metric-progress">
+          <view class="progress-bar" role="progressbar" aria-valuenow="{{ materialsProgress }}" aria-valuemin="0" aria-valuemax="100">
+            <view class="progress-fill" style="width: {{ materialsProgress }}%"></view>
+          </view>
+          <text class="progress-text">{{ materialsProgress }}% of weekly goal</text>
+        </view>
+      </view>
+      <navigator url="/pages/materials/materials" class="metric-link" aria-label="Manage study materials">
+        Manage Materials
+        <text class="link-arrow" aria-hidden="true">→</text>
+      </navigator>
+    </view>
+    
+    <view class="dashboard-card metric-card" tabindex="0">
+      <view class="metric-header">
+        <view class="metric-icon vocabulary-icon" aria-hidden="true">📝</view>
+        <view class="metric-badge" wx:if="{{ newCards > 0 }}" aria-live="polite">
+          +{{ newCards }}
+        </view>
+      </view>
+      <view class="metric-content">
+        <text class="metric-title">Vocabulary</text>
+        <text class="metric-value">{{ cardsCount }}</text>
+        <text class="metric-desc">Words & phrases</text>
+        <view class="metric-progress">
+          <view class="progress-bar" role="progressbar" aria-valuenow="{{ vocabularyProgress }}" aria-valuemin="0" aria-valuemax="100">
+            <view class="progress-fill" style="width: {{ vocabularyProgress }}%"></view>
+          </view>
+          <text class="progress-text">{{ vocabularyProgress }}% of weekly goal</text>
+        </view>
+      </view>
+      <navigator url="/pages/vocabulary/vocabulary" class="metric-link" aria-label="View vocabulary list">
+        View Vocabulary
+        <text class="link-arrow" aria-hidden="true">→</text>
+      </navigator>
+    </view>
+    
+    <view class="dashboard-card metric-card" tabindex="0">
+      <view class="metric-header">
+        <view class="metric-icon review-icon" aria-hidden="true">🔄</view>
+        <view class="metric-badge urgent" wx:if="{{ pendingReviews > 0 }}" aria-live="polite">
+          {{ pendingReviews }}
+        </view>
+      </view>
+      <view class="metric-content">
+        <text class="metric-title">Reviews</text>
+        <text class="metric-value">{{ pendingReviews }}</text>
+        <text class="metric-desc">Pending reviews</text>
+        <view class="metric-progress">
+          <view class="progress-bar" role="progressbar" aria-valuenow="{{ reviewProgress }}" aria-valuemin="0" aria-valuemax="100">
+            <view class="progress-fill urgent" style="width: {{ reviewProgress }}%"></view>
+          </view>
+          <text class="progress-text">{{ reviewProgress }}% completed this week</text>
+        </view>
+      </view>
+      <navigator url="/pages/review/review" class="metric-link" aria-label="Start review session">
+        Start Review
+        <text class="link-arrow" aria-hidden="true">→</text>
+      </navigator>
+    </view>
+    
+    <view class="dashboard-card metric-card" tabindex="0">
+      <view class="metric-header">
+        <view class="metric-icon todo-icon" aria-hidden="true">✅</view>
+        <view class="metric-badge" wx:if="{{ completedTasks > 0 }}" aria-live="polite">
+          +{{ completedTasks }}
+        </view>
+      </view>
+      <view class="metric-content">
+        <text class="metric-title">Tasks</text>
+        <text class="metric-value">{{ todoCount }}</text>
+        <text class="metric-desc">Remaining tasks</text>
+        <view class="metric-progress">
+          <view class="progress-bar" role="progressbar" aria-valuenow="{{ taskProgress }}" aria-valuemin="0" aria-valuemax="100">
+            <view class="progress-fill" style="width: {{ taskProgress }}%"></view>
+          </view>
+          <text class="progress-text">{{ taskProgress }}% completed this week</text>
+        </view>
+      </view>
+      <navigator url="/pages/todo/todo" class="metric-link" aria-label="View task list">
+        View Tasks
+        <text class="link-arrow" aria-hidden="true">→</text>
+      </navigator>
+    </view>
+  </view>
+  
+  <!-- Learning Insights Section -->
+  <view class="learning-insights" aria-labelledby="insights-heading">
+    <view class="section-header">
+      <text id="insights-heading" class="section-title">Learning Insights</text>
+      <navigator url="/pages/statistics/statistics" class="view-all-link" aria-label="View detailed analytics">View Detailed Analytics</navigator>
+    </view>
+    
+    <view class="insights-grid">
+      <!-- Learning Progress Chart -->
+      <view class="insight-card chart-card" tabindex="0">
+        <view class="insight-header">
+          <text>Weekly Learning Progress</text>
+          <view class="chart-legend">
+            <view class="legend-item">
+              <view class="legend-color" style="background-color: var(--primary-500)" aria-hidden="true"></view>
+              <text class="legend-text">Vocabulary</text>
+            </view>
+            <view class="legend-item">
+              <view class="legend-color" style="background-color: var(--secondary-500)" aria-hidden="true"></view>
+              <text class="legend-text">Reviews</text>
+            </view>
+          </view>
+        </view>
+        <view class="chart-container" aria-label="Weekly learning progress chart">
+          <view class="progress-chart">
+            <view 
+              wx:for="{{ weeklyProgress }}" 
+              wx:key="index"
+              class="chart-bar"
+              aria-hidden="true"
+            >
+              <view class="bar-container">
+                <view 
+                  class="bar vocabulary-bar"
+                  style="height: {{ item.vocabulary }}%"
+                  title="{{ item.vocabulary }}% vocabulary progress"
+                ></view>
+                <view 
+                  class="bar review-bar"
+                  style="height: {{ item.review }}%"
+                  title="{{ item.review }}% review progress"
+                ></view>
+              </view>
+              <text class="bar-label">{{ item.label }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      
+      <!-- Study Recommendations -->
+      <view class="insight-card recommendations-card" tabindex="0">
+        <view class="insight-header">
+          <text>Personalized Recommendations</text>
+          <text class="recommendations-badge" aria-label="AI-powered recommendations">AI-Powered</text>
+        </view>
+        <view class="recommendations-list">
+          <view 
+            wx:for="{{ recommendations }}" 
+            wx:key="index"
+            class="recommendation-item"
+          >
+            <view class="recommendation-icon" aria-hidden="true">{{ item.icon }}</view>
+            <view class="recommendation-content">
+              <text class="recommendation-title">{{ item.title }}</text>
+              <text class="recommendation-desc">{{ item.description }}</text>
+            </view>
+            <button 
+              class="recommendation-action"
+              bindtap="executeRecommendation"
+              data-action="{{ item.action }}"
+              aria-label="{{ item.actionText }}: {{ item.title }}"
+              tabindex="0"
+            >
+              {{ item.actionText }}
+            </button>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Recent Activity -->
+  <view class="recent-activity" aria-labelledby="activity-heading">
+    <view class="section-header">
+      <text id="activity-heading" class="section-title">Recent Activity</text>
+      <navigator url="/pages/statistics/statistics" class="view-all-link" aria-label="View all activity">View All Activity</navigator>
+    </view>
+    <view class="activity-card">
+      <view wx:if="{{ recentActivities.length === 0 }}" class="empty-state" tabindex="0">
+        <view class="empty-state-icon" aria-hidden="true">📊</view>
+        <text>No recent activity</text>
+        <text>Start learning to see your activity here</text>
+        <navigator url="/pages/materials/materials" class="btn btn-primary" aria-label="Add new study material">
+          <text class="btn-icon" aria-hidden="true">+</text>
+          <text class="btn-text">Add Study Material</text>
+        </navigator>
+      </view>
+      <view wx:else class="activity-list">
+        <view 
+          wx:for="{{ recentActivities }}" 
+          wx:key="index"
+          class="activity-item"
+          tabindex="0"
+        >
+          <view class="activity-icon-container">
+            <view class="activity-icon" aria-hidden="true">{{ getActivityIcon(item.type) }}</view>
+          </view>
+          <view class="activity-content">
+            <view class="activity-header">
+              <text class="activity-type">{{ item.type }}</text>
+              <text class="activity-time">{{ formatTime(item.timestamp) }}</text>
+            </view>
+            <text class="activity-description">{{ item.description }}</text>
+          </view>
+          <view class="activity-meta" wx:if="{{ item.meta }}">
+            <text class="activity-meta-item">{{ item.meta }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

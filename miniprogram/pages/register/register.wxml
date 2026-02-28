@@ -1,0 +1,74 @@
+<view class="auth-container" aria-labelledby="register-heading">
+  <view class="auth-card" tabindex="0">
+    <text id="register-heading" class="auth-title">Register</text>
+    <form bindsubmit="handleRegister" class="login-form">
+      <view class="form-group" role="group" aria-labelledby="username-label">
+        <text id="username-label" class="form-label">Username</text>
+        <input 
+          type="text" 
+          id="username"
+          value="{{ form.username }}" 
+          bindinput="handleInput"
+          data-field="username"
+          placeholder="Choose a username"
+          disabled="{{ loading }}"
+          class="form-control"
+          required
+          aria-required="true"
+        />
+      </view>
+      <view class="form-group" role="group" aria-labelledby="email-label">
+        <text id="email-label" class="form-label">Email</text>
+        <input 
+          type="email" 
+          id="email"
+          value="{{ form.email }}" 
+          bindinput="handleInput"
+          data-field="email"
+          placeholder="Enter your email"
+          disabled="{{ loading }}"
+          class="form-control"
+          required
+          aria-required="true"
+        />
+      </view>
+      <view class="form-group" role="group" aria-labelledby="password-label">
+        <text id="password-label" class="form-label">Password</text>
+        <input 
+          type="password" 
+          id="password"
+          value="{{ form.password }}" 
+          bindinput="handleInput"
+          data-field="password"
+          placeholder="Create a password"
+          disabled="{{ loading }}"
+          class="form-control"
+          required
+          aria-required="true"
+        />
+      </view>
+      <view class="form-actions">
+        <button 
+          type="submit" 
+          disabled="{{ loading }}"
+          class="btn btn-primary"
+          form-type="submit"
+          aria-busy="{{ loading }}"
+        >
+          <view wx:if="{{ loading }}" class="loading-spinner"></view>
+          {{ loading ? 'Registering...' : 'Register' }}
+        </button>
+      </view>
+    </form>
+    <view class="auth-link">
+      Already have an account? 
+      <navigator url="/pages/login/login" aria-label="Login here" class="link">Login here</navigator>
+    </view>
+    <view wx:if="{{ error }}" class="error-message" role="alert" aria-live="assertive">
+      {{ error }}
+    </view>
+    <view wx:if="{{ success }}" class="success-message" role="alert" aria-live="polite">
+      {{ success }}
+    </view>
+  </view>
+</view>

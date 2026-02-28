@@ -1,0 +1,54 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/register/register",
+    "pages/dashboard/dashboard",
+    "pages/materials/materials",
+    "pages/material-viewer/material-viewer",
+    "pages/vocabulary/vocabulary",
+    "pages/review/review",
+    "pages/review-session/review-session",
+    "pages/todo/todo",
+    "pages/decks/decks"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#2c5aa0",
+    "navigationBarTitleText": "English Mastery",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#666666",
+    "selectedColor": "#2c5aa0",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/dashboard/dashboard",
+        "text": "Dashboard"
+      },
+      {
+        "pagePath": "pages/materials/materials",
+        "text": "Materials"
+      },
+      {
+        "pagePath": "pages/vocabulary/vocabulary",
+        "text": "Vocabulary"
+      },
+      {
+        "pagePath": "pages/review/review",
+        "text": "Review"
+      },
+      {
+        "pagePath": "pages/todo/todo",
+        "text": "Tasks"
+      }
+    ]
+  },
+  "networkTimeout": {
+    "request": 10000,
+    "downloadFile": 10000
+  },
+  "debug": true,
+  "sitemapLocation": "sitemap.json"
+}

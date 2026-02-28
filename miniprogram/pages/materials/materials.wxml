@@ -1,0 +1,145 @@
+<view class="materials">
+  <view class="materials-header">
+    <text class="page-title">Study Materials</text>
+    <button type="primary" bindtap="showUploadModal" class="upload-button">
+      <text class="button-icon">+</text>
+      Upload Material
+    </button>
+  </view>
+
+  <!-- Search and Filter Controls -->
+  <view class="materials-controls">
+    <view class="search-section">
+      <input
+        value="{{ searchQuery }}"
+        bindinput="handleSearchInput"
+        placeholder="Search materials by title or filename..."
+        class="search-input"
+      />
+      <view class="search-icon">🔍</view>
+      <view wx:if="{{ searchQuery }}" bindtap="clearSearch" class="clear-icon">✕</view>
+    </view>
+    
+    <view class="filter-section">
+      <picker bindchange="handleTypeChange" value="{{ selectedTypeIndex }}" range="{{ typeOptions }}" range-key="label" class="type-filter">
+        <view class="picker-view">
+          {{ selectedType ? getTypeLabel(selectedType) : 'Filter by type' }}
+          <view class="picker-arrow">▼</view>
+        </view>
+      </picker>
+      
+      <picker bindchange="handleSortChange" value="{{ sortByIndex }}" range="{{ sortOptions }}" range-key="label" class="sort-select">
+        <view class="picker-view">
+          {{ getSortLabel(sortBy) }}
+          <view class="picker-arrow">▼</view>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <!-- Materials List -->
+  <view wx:if="{{ loading }}" class="loading-container">
+    <view class="skeleton"></view>
+    <view class="skeleton"></view>
+    <view class="skeleton"></view>
+  </view>
+  
+  <view wx:elif="{{ filteredMaterials.length === 0 }}" class="empty-state">
+    <view class="empty-icon">📄</view>
+    <view class="empty-description">{{ materials.length === 0 ? 'No materials uploaded yet' : 'No materials match your search criteria' }}</view>
+    <button wx:if="{{ materials.length === 0 }}" type="primary" bindtap="showUploadModal" class="empty-button">
+      Upload Your First Material
+    </button>
+    <button wx:else bindtap="clearFilters" class="empty-button secondary">
+      Clear Filters
+    </button>
+  </view>
+  
+  <view wx:else class="materials-grid">
+    <view
+      wx:for="{{ paginatedMaterials }}"
+      wx:key="index"
+      class="material-card"
+    >
+      <view class="material-card-header">
+        <view class="material-icon" aria-hidden="true">
+          {{ getMaterialIcon(item.type) }}
+        </view>
+        <view class="material-title">{{ item.title }}</view>
+      </view>
+      <view class="material-card-body">
+        <view class="material-meta">
+          <view class="meta-item">
+            <text class="meta-label">Type:</text>
+            <text class="meta-value">{{ getItemTypeLabel(item.type) }}</text>
+          </view>
+          <view class="meta-item">
+            <text class="meta-label">Size:</text>
+            <text class="meta-value">{{ formatFileSize(item.fileSize) }}</text>
+          </view>
+          <view class="meta-item">
+            <text class="meta-label">Uploaded:</text>
+            <text class="meta-value">{{ formatDate(item.createdDate) }}</text>
+          </view>
+        </view>
+      </view>
+      <view class="material-card-footer">
+        <button bindtap="viewMaterial" data-material="{{ item }}" class="card-button primary">
+          View
+        </button>
+        <button bindtap="goToHighlighting" data-material="{{ item }}" class="card-button secondary">
+          Highlight
+        </button>
+        <button bindtap="deleteMaterial" data-material="{{ item }}" class="card-button danger">
+          Delete
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- Pagination -->
+  <view wx:if="{{ totalPages > 1 }}" class="pagination-container">
+    <view class="pagination">
+      <button bindtap="prevPage" disabled="{{ currentPage === 1 }}" class="pagination-button">
+        ◀
+      </button>
+      <view class="pagination-info">
+        Page {{ currentPage }} of {{ totalPages }}
+      </view>
+      <button bindtap="nextPage" disabled="{{ currentPage === totalPages }}" class="pagination-button">
+        ▶
+      </button>
+    </view>
+  </view>
+
+  <!-- Upload Modal -->
+  <view wx:if="{{ showUploadModal }}" class="modal-overlay" bindtap="hideUploadModal"></view>
+  <view wx:if="{{ showUploadModal }}" class="modal-content">
+    <view class="modal-header">
+      <text class="modal-title">Upload Study Materials</text>
+      <button bindtap="hideUploadModal" class="modal-close">✕</button>
+    </view>
+    <view class="modal-body">
+      <view class="upload-section">
+        <view class="upload-area" bindtap="chooseFile">
+          <view class="upload-icon">📁</view>
+          <text class="upload-text">Tap to select files</text>
+          <text class="upload-hint">Support: PDF, DOCX, MP4, etc.</text>
+        </view>
+        <view wx:if="{{ selectedFiles.length > 0 }}" class="files-list">
+          <view wx:for="{{ selectedFiles }}" wx:key="index" class="file-item">
+            <text class="file-name">{{ item.name }}</text>
+            <text class="file-size">{{ formatFileSize(item.size) }}</text>
+            <button bindtap="removeFile" data-index="{{ index }}" class="remove-file">✕</button>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="modal-footer">
+      <button bindtap="hideUploadModal" class="modal-button secondary">Cancel</button>
+      <button bindtap="uploadFiles" class="modal-button primary" disabled="{{ selectedFiles.length === 0 }}">
+        Upload
+      </button>
+    </view>
+  </view>
+</view>

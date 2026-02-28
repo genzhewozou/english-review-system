@@ -1,0 +1,158 @@
+<view class="review">
+  <!-- Header Section -->
+  <view class="review-header fade-in">
+    <text class="review-title">Review Sessions</text>
+    <text class="review-subtitle">Review your vocabulary cards using spaced repetition</text>
+  </view>
+  
+  <!-- Main Content -->
+  <view class="review-start">
+    <view class="card">
+      <!-- Stats Section -->
+      <view class="review-stats">
+        <view class="stat-item">
+          <text class="stat-value">{{ pendingReviews }}</text>
+          <text class="stat-label">Due for Review</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-value">{{ totalCards }}</text>
+          <text class="stat-label">Total Vocabulary</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-value">{{ userDecks.length }}</text>
+          <text class="stat-label">Your Decks</text>
+        </view>
+      </view>
+      
+      <!-- Session Type Selection -->
+      <view class="session-type-selection">
+        <text class="selection-title">Step 1: Choose session type</text>
+        <view class="session-type-tabs">
+          <button 
+            bindtap="handleSessionTypeChange" 
+            data-type="all"
+            class="session-type-tab {{ sessionType === 'all' ? 'active' : '' }}"
+          >
+            All Vocabulary
+          </button>
+          <button 
+            bindtap="handleSessionTypeChange" 
+            data-type="deck"
+            class="session-type-tab {{ sessionType === 'deck' ? 'active' : '' }}"
+          >
+            From Deck
+          </button>
+          <button 
+            bindtap="handleSessionTypeChange" 
+            data-type="custom"
+            class="session-type-tab {{ sessionType === 'custom' ? 'active' : '' }}"
+          >
+            Custom Selection
+          </button>
+        </view>
+      </view>
+      
+      <!-- Deck Selection -->
+      <view class="deck-selection" wx:if="{{ sessionType === 'deck' && userDecks.length }}">
+        <text class="selection-title">Step 2: Choose a deck</text>
+        <text class="selection-help">Select a deck to review all its cards.</text>
+        <view class="deck-radio-list">
+          <radio-group bindchange="handleDeckSelectionChange">
+            <label wx:for="{{ userDecks }}" wx:key="id" class="deck-radio-item">
+              <radio value="{{ item.id }}" checked="{{ selectedDeckId === item.id }}" />
+              <text class="deck-radio-label">{{ item.name }}</text>
+              <text class="deck-card-count">({{ item.cardCount || 0 }} cards)</text>
+            </label>
+          </radio-group>
+        </view>
+      </view>
+      
+      <!-- Custom Selection -->
+      <view wx:if="{{ sessionType === 'custom' }}">
+        <!-- Material Selection -->
+        <view class="material-selection" wx:if="{{ materials.length }}">
+          <text class="selection-title">Step 2: Choose study materials</text>
+          <text class="selection-help">Select one material to view its vocabulary cards.</text>
+          <view class="material-radio-list">
+            <radio-group bindchange="handleMaterialSelectionChange">
+              <label wx:for="{{ materials }}" wx:key="id" class="material-radio-item">
+                <radio value="{{ item.id }}" checked="{{ selectedMaterialId === item.id }}" />
+                <text class="material-radio-label">{{ item.title }}</text>
+              </label>
+            </radio-group>
+          </view>
+        </view>
+        
+        <!-- Card Selection -->
+        <view class="card-selection" wx:if="{{ selectedMaterialId && materialCards.length }}">
+          <text class="selection-title">Step 3: Choose vocabulary for this session</text>
+          <text class="selection-help">Select the words you want to add to your new review session.</text>
+          
+          <!-- Search -->
+          <view class="search-container">
+            <input 
+              class="search-input" 
+              placeholder="Search cards..." 
+              value="{{ searchQuery }}" 
+              bindinput="handleSearchInputChange"
+            />
+            <view class="search-options">
+              <label class="checkbox-container">
+                <checkbox value="{{ similarSearchEnabled }}" bindchange="handleSimilarSearchToggle" />
+                <text>Include similar words</text>
+              </label>
+            </view>
+          </view>
+          
+          <!-- Card List -->
+          <view class="selection-list">
+            <checkbox-group bindchange="handleCardSelectionChange">
+              <label wx:for="{{ getFilteredCards() }}" wx:key="id" class="selection-item">
+                <checkbox value="{{ item.id }}" checked="{{ selectedCardIds.indexOf(item.id.toString()) !== -1 }}" />
+                <text class="selection-text">{{ item.text }}</text>
+              </label>
+            </checkbox-group>
+          </view>
+        </view>
+        
+        <!-- Selected Cards Summary -->
+        <view class="selected-cards-summary" wx:if="{{ selectedCardIds.length }}">
+          <text class="selection-title">Step 4: Selected cards ({{ selectedCardIds.length }})</text>
+          <text class="selection-help">Review your selected cards before starting the session.</text>
+          <view class="selected-cards-list">
+            <view wx:for="{{ getSelectedCardsList() }}" wx:key="id" class="selected-card-item">
+              <view class="card-info">
+                <text class="card-text">{{ item.text }}</text>
+                <text class="card-source">From: {{ item.materialTitle }}</text>
+              </view>
+              <button bindtap="deleteCard" data-id="{{ item.id }}" class="delete-btn">×</button>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- Start Button -->
+      <button 
+        class="btn btn-primary start-btn" 
+        bindtap="startReviewSession"
+        disabled="{{ starting || !canStartSession() }}"
+      >
+        <view wx:if="{{ starting }}" class="loading-spinner small"></view>
+        {{ starting ? 'Starting...' : getStartButtonText() }}
+      </button>
+      
+      <!-- Empty States -->
+      <text wx:if="{{ totalCards === 0 }}" class="no-data">
+        No vocabulary cards found. Please add some cards first!
+      </text>
+      
+      <text wx:if="{{ materials.length === 0 && sessionType === 'custom' }}" class="no-data">
+        No study materials found. Please upload some materials first!
+      </text>
+      
+      <text wx:if="{{ userDecks.length === 0 && sessionType === 'deck' }}" class="no-data">
+        No decks found. Please create a deck first!
+      </text>
+    </view>
+  </view>
+</view>

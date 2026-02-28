@@ -1,0 +1,358 @@
+<view class="vocabulary">
+  <!-- Header Section -->
+  <view class="vocabulary-header fade-in">
+    <text class="vocabulary-title">Vocabulary Management</text>
+    <text class="vocabulary-subtitle">Manage and organize your vocabulary cards effectively</text>
+  </view>
+  
+  <!-- Actions Section -->
+  <view class="actions-section fade-in">
+    <view class="action-buttons">
+      <button bindtap="showAddCardModal" class="btn btn-primary">
+        <text class="btn-icon">+</text>
+        <text class="btn-text">Add Card</text>
+      </button>
+      <button bindtap="openTagManagement" class="btn btn-secondary">
+        <text class="btn-icon">🏷️</text>
+        <text class="btn-text">Manage Tags</text>
+      </button>
+      <view class="action-dropdown">
+        <button bindtap="toggleDropdown" class="btn btn-outline" aria-haspopup="true" aria-expanded="{{ isDropdownOpen }}">
+          <text class="btn-icon">⚙️</text>
+          <text class="btn-text">More</text>
+          <text class="btn-arrow" class="{{ isDropdownOpen ? 'rotated' : '' }}">▼</text>
+        </button>
+        <view wx:if="{{ isDropdownOpen }}" class="dropdown-menu" role="menu">
+          <button bindtap="openTagManagement" class="dropdown-item" role="menuitem">
+            <text class="item-icon">📋</text>
+            <text class="item-text">Manage Tags</text>
+          </button>
+          <button bindtap="openTagGuide" class="dropdown-item" role="menuitem">
+            <text class="item-icon">❓</text>
+            <text class="item-text">How to Use Tags</text>
+          </button>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Filters Section -->
+  <view class="filters-card card fade-in">
+    <view class="filter-header">
+      <text class="filter-title">Filters</text>
+      <button bindtap="clearFilters" class="btn btn-sm btn-outline">
+        <text class="btn-icon">🗑️</text>
+        <text class="btn-text">Clear All</text>
+      </button>
+    </view>
+    <view class="filter-controls">
+      <view class="filter-group">
+        <text class="filter-label">Material</text>
+        <picker bindchange="handleMaterialChange" value="{{ selectedMaterialIndex }}" range="{{ materials }}" range-key="title">
+          <view class="form-control">
+            {{ selectedMaterial ? getMaterialTitle(selectedMaterial) : 'All Materials' }}
+          </view>
+        </picker>
+      </view>
+      <view class="filter-group">
+        <text class="filter-label">Tag</text>
+        <picker bindchange="handleTagChange" value="{{ selectedTagIndex }}" range="{{ tags }}" range-key="name">
+          <view class="form-control">
+            {{ selectedTag ? getTagName(selectedTag) : 'All Tags' }}
+          </view>
+        </picker>
+      </view>
+      <view class="filter-group search-group">
+        <text class="filter-label">Search</text>
+        <view class="search-input-group">
+          <input 
+            value="{{ searchTerm }}" 
+            bindinput="handleSearchInput"
+            type="text" 
+            placeholder="Search words, phrases, or notes..." 
+            class="form-control"
+          >
+          </input>
+          <button wx:if="{{ searchTerm }}" bindtap="clearSearch" class="search-clear-btn">✕</button>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Cards Header -->
+  <view class="cards-header fade-in">
+    <text class="cards-title">Cards</text>
+    <text class="cards-count">{{ filteredCards.length }} cards</text>
+  </view>
+  
+  <!-- Loading State -->
+  <view wx:if="{{ loading }}" class="loading-state fade-in">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">Loading cards...</text>
+  </view>
+  
+  <!-- Empty State -->
+  <view wx:elif="{{ filteredCards.length === 0 }}" class="empty-state fade-in">
+    <view class="empty-state-icon">📝</view>
+    <text class="empty-state-title">No vocabulary cards found</text>
+    <text class="empty-state-description">Start saving words and phrases from your study materials!</text>
+    <button bindtap="showAddCardModal" class="btn btn-primary">
+      <text class="btn-icon">+</text>
+      <text class="btn-text">Add First Card</text>
+    </button>
+  </view>
+  
+  <!-- Cards List -->
+  <view wx:else class="cards-list fade-in">
+    <view wx:for="{{ filteredCards }}" wx:key="index" class="card card-item">
+      <view class="card-header">
+        <view class="card-text-container">
+          <text class="card-text">{{ item.text }}</text>
+          <view class="card-tags" wx:if="{{ item.tags && item.tags.length > 0 }}">
+            <text wx:for="{{ item.tags }}" wx:key="tagIndex" class="badge badge-secondary">
+              {{ getTagName(item.tags[tagIndex]) }}
+            </text>
+          </view>
+        </view>
+        <view class="card-actions">
+          <button bindtap="editCard" data-card="{{ item }}" class="btn btn-sm btn-outline">
+            <text class="btn-icon">✏️</text>
+            <text class="btn-text">Edit</text>
+          </button>
+          <button bindtap="deleteCard" data-id="{{ item.id }}" class="btn btn-sm btn-error">
+            <text class="btn-icon">🗑️</text>
+            <text class="btn-text">Delete</text>
+          </button>
+        </view>
+      </view>
+      
+      <view class="card-details">
+        <view class="card-context" wx:if="{{ item.context }}">
+          <text class="detail-label">Context</text>
+          <text class="detail-content">{{ item.context }}</text>
+        </view>
+        
+        <view class="card-comment" wx:if="{{ item.userComment }}">
+          <text class="detail-label">Your Notes</text>
+          <text class="detail-content">{{ item.userComment }}</text>
+        </view>
+        
+        <view class="card-meta">
+          <view class="meta-grid">
+            <view class="meta-item">
+              <text class="meta-label">Material</text>
+              <text class="meta-value">{{ getMaterialTitle(item.materialId) }}</text>
+            </view>
+            <view class="meta-item">
+              <text class="meta-label">Added</text>
+              <text class="meta-value">{{ formatDate(item.createdDate) }}</text>
+            </view>
+            <view class="meta-item" wx:if="{{ item.nextReviewDate }}">
+              <text class="meta-label">Next Review</text>
+              <text class="meta-value">{{ formatDate(item.nextReviewDate) }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Edit Modal -->
+  <view wx:if="{{ showEditModal }}" class="modal-overlay" catchtap="closeEditModal">
+    <view class="modal" catchtap="">
+      <view class="modal-header">
+        <text>Edit Card</text>
+        <button bindtap="closeEditModal" class="close-btn">&times;</button>
+      </view>
+      <view class="modal-body">
+        <form bindsubmit="updateCard">
+          <view class="form-group">
+            <text class="form-label">Word/Phrase</text>
+            <input value="{{ editForm.text }}" type="text" class="form-control" disabled />
+          </view>
+          <view class="form-group">
+            <text class="form-label">Your Notes</text>
+            <textarea 
+              value="{{ editForm.userComment }}" 
+              bindinput="handleEditCommentInput" 
+              class="form-control" 
+              placeholder="Add your notes about this word/phrase..."
+            ></textarea>
+          </view>
+          <view class="form-group">
+            <text class="form-label">Select Tags</text>
+            <view class="tag-selection">
+              <view wx:for="{{ tags }}" wx:key="tagIndex" class="tag-checkbox">
+                <checkbox 
+                  value="{{ tags[tagIndex].id }}" 
+                  checked="{{ editForm.tags.includes(tags[tagIndex].id) }}"
+                  bindchange="handleTagCheckboxChange"
+                  data-tagid="{{ tags[tagIndex].id }}"
+                />
+                <text>{{ tags[tagIndex].name }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="form-actions">
+            <button type="button" bindtap="closeEditModal" class="btn btn-outline">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" disabled="{{ updating }}">
+              <view wx:if="{{ updating }}" class="loading-spinner small"></view>
+              {{ updating ? 'Updating...' : 'Update' }}
+            </button>
+          </view>
+        </form>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Add Card Modal -->
+  <view wx:if="{{ showAddCardModal }}" class="modal-overlay" catchtap="closeAddCardModal">
+    <view class="modal" catchtap="">
+      <view class="modal-header">
+        <text>Add New Card</text>
+        <button bindtap="closeAddCardModal" class="close-btn">&times;</button>
+      </view>
+      <view class="modal-body">
+        <form bindsubmit="addCard">
+          <view class="form-group">
+            <text class="form-label">Word/Phrase</text>
+            <input value="{{ cardForm.text }}" bindinput="handleCardTextInput" type="text" class="form-control" placeholder="Enter word or phrase" />
+          </view>
+          <view class="form-group">
+            <text class="form-label">Context (Optional)</text>
+            <textarea value="{{ cardForm.context }}" bindinput="handleCardContextInput" class="form-control" placeholder="Enter context"></textarea>
+          </view>
+          <view class="form-group">
+            <text class="form-label">Your Notes</text>
+            <textarea value="{{ cardForm.userComment }}" bindinput="handleCardCommentInput" class="form-control" placeholder="Add your notes..."></textarea>
+          </view>
+          <view class="form-group">
+            <text class="form-label">Select Material</text>
+            <picker bindchange="handleCardMaterialChange" value="{{ cardFormMaterialIndex }}" range="{{ materials }}" range-key="title">
+              <view class="form-control">
+                {{ cardForm.materialId ? getMaterialTitle(cardForm.materialId) : 'Select a material' }}
+              </view>
+            </picker>
+          </view>
+          <view class="form-group">
+            <text class="form-label">Select Tags (Optional)</text>
+            <view class="tag-selection">
+              <view wx:for="{{ tags }}" wx:key="tagIndex" class="tag-checkbox">
+                <checkbox 
+                  value="{{ tags[tagIndex].id }}" 
+                  checked="{{ cardForm.tags.includes(tags[tagIndex].id) }}"
+                  bindchange="handleCardTagCheckboxChange"
+                  data-tagid="{{ tags[tagIndex].id }}"
+                />
+                <text>{{ tags[tagIndex].name }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="form-actions">
+            <button type="button" bindtap="closeAddCardModal" class="btn btn-outline">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" disabled="{{ saving }}">
+              <view wx:if="{{ saving }}" class="loading-spinner small"></view>
+              {{ saving ? 'Saving...' : 'Add Card' }}
+            </button>
+          </view>
+        </form>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Tag Management Modal -->
+  <view wx:if="{{ showTagManagementModal }}" class="modal-overlay" catchtap="closeTagManagementModal">
+    <view class="modal" catchtap="">
+      <view class="modal-header">
+        <text>Manage Tags</text>
+        <button bindtap="closeTagManagementModal" class="close-btn">&times;</button>
+      </view>
+      <view class="modal-body">
+        <view class="tag-management">
+          <!-- Add New Tag Form -->
+          <view class="add-tag-form card">
+            <text>Add New Tag</text>
+            <form bindsubmit="addTagInManagement">
+              <view class="form-group">
+                <text class="form-label">Tag Name</text>
+                <input value="{{ tagForm.name }}" bindinput="handleTagNameInput" type="text" class="form-control" placeholder="Enter tag name" />
+              </view>
+              <view class="form-group">
+                <text class="form-label">Description (Optional)</text>
+                <textarea value="{{ tagForm.description }}" bindinput="handleTagDescriptionInput" class="form-control" placeholder="Enter tag description"></textarea>
+              </view>
+              <view class="form-actions">
+                <button type="submit" class="btn btn-primary" disabled="{{ saving }}">
+                  <view wx:if="{{ saving }}" class="loading-spinner small"></view>
+                  {{ saving ? 'Saving...' : 'Add Tag' }}
+                </button>
+              </view>
+            </form>
+          </view>
+
+          <!-- All Tags List -->
+          <text>All Tags</text>
+          <view class="tag-list">
+            <view wx:for="{{ tags }}" wx:key="tagIndex" class="tag-item card">
+              <view class="tag-info">
+                <text>{{ tags[tagIndex].name }}</text>
+                <text wx:if="{{ tags[tagIndex].description }}">{{ tags[tagIndex].description }}</text>
+              </view>
+              <view class="tag-actions">
+                <button bindtap="deleteTag" data-id="{{ tags[tagIndex].id }}" data-name="{{ tags[tagIndex].name }}" class="btn btn-sm btn-error" disabled="{{ isTagUsed(tags[tagIndex].id) }}">
+                  Delete
+                </button>
+              </view>
+            </view>
+          </view>
+          <view class="tag-actions-footer">
+            <button bindtap="closeTagManagementModal" class="btn btn-outline">Close</button>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- Tag Usage Guide Modal -->
+  <view wx:if="{{ showTagGuideModal }}" class="modal-overlay" catchtap="closeTagGuideModal">
+    <view class="modal" catchtap="">
+      <view class="modal-header">
+        <text>How to Use Tags</text>
+        <button bindtap="closeTagGuideModal" class="close-btn">&times;</button>
+      </view>
+      <view class="modal-body">
+        <view class="tag-guide">
+          <view class="guide-section card">
+            <text>Creating Tags</text>
+            <text>Click the "Add Tag" button to create new tags. You can add a name and optional description for each tag.</text>
+          </view>
+          <view class="guide-section card">
+            <text>Associating Tags with Cards</text>
+            <text>When adding a new card, select the tags you want to associate with it from the checkbox list.</text>
+          </view>
+          <view class="guide-section card">
+            <text>Filtering by Tags</text>
+            <text>Use the "All Tags" dropdown in the filters section to filter vocabulary cards by specific tags.</text>
+          </view>
+          <view class="guide-section card">
+            <text>Managing Tags</text>
+            <text>Click the "Manage Tags" button to view all created tags and their descriptions.</text>
+          </view>
+          <view class="guide-section card">
+            <text>Best Practices</text>
+            <view class="guide-list">
+              <text>• Use descriptive tag names (e.g., "Business English", "Academic", "Everyday")</text>
+              <text>• Create consistent tag categories</text>
+              <text>• Don't overuse tags - keep it simple and meaningful</text>
+              <text>• Use tags to group related vocabulary for focused review</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
